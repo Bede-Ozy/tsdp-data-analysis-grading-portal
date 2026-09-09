@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#F8FAFC] text-slate-700 font-sans antialiased min-h-screen selection:bg-brand-primary selection:text-white font-normal;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-slate-800 font-semibold tracking-tight;
+  }
+
+  /* Universal Placeholder vs Label Hierarchy (Minimalist & Refined) */
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 0.8125rem !important; /* 13px */
+    font-weight: 400 !important;
+    font-style: normal !important;
+    color: #94a3b8 !important; /* slate-400 */
+    letter-spacing: normal !important;
+  }
+
+  input:not(:placeholder-shown),
+  textarea:not(:placeholder-shown) {
+    font-weight: 500;
+    color: #1e293b;
+    font-style: normal;
+  }
+}
+
+@layer components {
+  /* Brand Buttons - Minimalist & Refined */
+  .btn-primary {
+    @apply bg-brand-primary hover:bg-brand-primary-dark text-white font-medium px-4 py-2.5 rounded-lg shadow-xs hover:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-brand-secondary hover:bg-brand-secondary-dark text-white font-medium px-4 py-2.5 rounded-lg shadow-xs hover:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-secondary/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm;
+  }
+
+  .btn-outline {
+    @apply border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 rounded-lg shadow-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm;
+  }
+
+  .btn-danger {
+    @apply bg-brand-error hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-error/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm;
+  }
+
+  /* Portal Card Styles - Clean & Minimalist */
+  .portal-card {
+    @apply bg-white rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all duration-200 p-6;
+  }
+
+  /* Form Input Styles with Clean Visual Hierarchy */
+  .form-label {
+    @apply block text-xs font-medium text-slate-600 mb-1.5 select-none;
+  }
+
+  .form-input {
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-sm placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200;
+  }
+
+  .form-select-trigger {
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200 cursor-pointer flex items-center justify-between text-left;
+  }
+
+  .form-select {
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 font-normal text-sm focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all duration-200;
+  }
+
+  /* Badges - Subtle, Refined, Minimalist */
+  .badge-primary {
+    @apply bg-brand-primary-light text-brand-primary px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-secondary {
+    @apply bg-brand-secondary-light text-brand-secondary-dark px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-blue-50 text-brand-success border border-blue-100 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-error {
+    @apply bg-red-50 text-brand-error border border-red-100 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.custom-select-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-select-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.custom-select-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-select-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
