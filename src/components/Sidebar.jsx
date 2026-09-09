@@ -18,8 +18,7 @@ import {
   CheckCircle,
   ShieldCheck,
   UserCheck,
-  FileBarChart,
-  BookOpen
+  FileBarChart
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {

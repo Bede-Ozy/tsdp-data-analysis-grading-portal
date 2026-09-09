@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, User, Menu, X, ShieldCheck, GraduationCap, Award } from 'lucide-react';
 
 export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   const { user, role, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [logoErrors, setLogoErrors] = useState({});
 
   const handleLogout = () => {
@@ -148,12 +149,40 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-xs">
-                <Link to="/student/login" className="btn-primary py-1.5 px-3 text-xs">
-                  Resident Login
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs">
+                <Link
+                  to="/student/login"
+                  className={`py-1.5 px-2.5 sm:px-3 rounded-lg font-medium transition-colors ${
+                    location.pathname.startsWith('/student')
+                      ? 'bg-brand-primary text-white shadow-xs'
+                      : 'text-slate-600 hover:text-brand-primary hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="sm:hidden">Resident</span>
+                  <span className="hidden sm:inline">Resident Login</span>
                 </Link>
-                <Link to="/coach/login" className="btn-outline py-1.5 px-3 text-xs hidden sm:inline-flex">
-                  Coach Portal
+                <Link
+                  to="/coach/login"
+                  className={`py-1.5 px-2.5 sm:px-3 rounded-lg font-medium transition-colors ${
+                    location.pathname.startsWith('/coach')
+                      ? 'bg-brand-secondary text-white shadow-xs'
+                      : 'text-slate-600 hover:text-brand-secondary hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="sm:hidden">Coach</span>
+                  <span className="hidden sm:inline">Coach Portal</span>
+                </Link>
+                <Link
+                  to="/admin/login"
+                  className={`py-1.5 px-2.5 sm:px-3 rounded-lg font-medium inline-flex items-center gap-1.5 transition-colors ${
+                    location.pathname.startsWith('/admin')
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span className="sm:hidden">Admin</span>
+                  <span className="hidden sm:inline">Admin Login</span>
                 </Link>
               </div>
             )}

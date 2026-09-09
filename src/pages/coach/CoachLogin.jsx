@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Award, ArrowRight, AlertCircle, Sparkles, Shield } from 'lucide-react';
+import { Award, ArrowRight, AlertCircle, Sparkles, ShieldCheck, GraduationCap } from 'lucide-react';
 
 export default function CoachLogin() {
   const [coachNumber, setCoachNumber] = useState('');
@@ -54,6 +54,31 @@ export default function CoachLogin() {
           </div>
 
           <div className="p-6 sm:p-8">
+            {/* Role Switcher Tabs */}
+            <div className="flex rounded-xl bg-slate-100 p-1 mb-6 border border-slate-200/80 text-xs font-medium">
+              <Link
+                to="/student/login"
+                className="flex-1 py-2 text-center rounded-lg text-slate-500 hover:text-slate-900 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Student</span>
+              </Link>
+              <Link
+                to="/coach/login"
+                className="flex-1 py-2 text-center rounded-lg bg-white text-brand-secondary-dark font-semibold shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>Coach</span>
+              </Link>
+              <Link
+                to="/admin/login"
+                className="flex-1 py-2 text-center rounded-lg text-slate-500 hover:text-slate-900 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </Link>
+            </div>
+
             {error && (
               <div className="mb-5 p-3.5 bg-red-50 border border-brand-error/20 rounded-xl text-brand-error text-xs font-medium flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -110,19 +135,16 @@ export default function CoachLogin() {
             </form>
 
             {/* Links */}
-            <div className="mt-8 pt-5 border-t border-slate-100 text-center text-xs space-y-2 text-brand-neutral-muted">
-              <p>
-                Are you a resident student?{' '}
-                <Link to="/student/login" className="font-medium text-brand-primary hover:underline">
-                  Resident Student Login
-                </Link>
-              </p>
-              <p>
-                System Administrator?{' '}
-                <Link to="/admin/login" className="font-medium text-slate-700 hover:underline">
-                  Admin Portal
-                </Link>
-              </p>
+            <div className="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-brand-neutral-muted">
+              <Link to="/student/login" className="font-medium text-brand-primary hover:underline flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Resident Login</span>
+              </Link>
+              <span className="text-slate-300">·</span>
+              <Link to="/admin/login" className="font-medium text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-800" />
+                <span>Admin Portal</span>
+              </Link>
             </div>
           </div>
         </div>

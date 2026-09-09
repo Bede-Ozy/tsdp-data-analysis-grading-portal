@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Components
@@ -74,8 +74,14 @@ function AppLayout({ children }) {
             © {new Date().getFullYear()} ITF-NECA Technical Skills Development Project (TSDP) · Powered by{' '}
             <strong className="text-brand-neutral">ShamzBridge Consult</strong>
           </p>
-          <div className="flex items-center gap-4">
-            <span>Data Analytics Portal v1.0</span>
+          <div className="flex items-center gap-3">
+            <Link to="/student/login" className="hover:text-brand-primary transition-colors">Resident</Link>
+            <span className="text-slate-300">·</span>
+            <Link to="/coach/login" className="hover:text-brand-primary transition-colors">Coach</Link>
+            <span className="text-slate-300">·</span>
+            <Link to="/admin/login" className="hover:text-slate-900 font-medium transition-colors">Admin</Link>
+            <span className="text-slate-300">·</span>
+            <span>v1.0</span>
           </div>
         </div>
       </footer>
