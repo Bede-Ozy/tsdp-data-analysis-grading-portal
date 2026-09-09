@@ -52,7 +52,7 @@ tsdp-data-analysis-grading-portal/
 │   └── favicon.svg
 ├── src/
 │   ├── components/
-│   │   ├── Navbar.jsx             # Partner logos, role badge, tutorial link, logout
+│   │   ├── Navbar.jsx             # Partner logos, role badge, user menu & logout
 │   │   ├── Sidebar.jsx            # Role-based navigation menu (Student, Coach, Admin)
 │   │   ├── StudentCard.jsx        # Resident score card, badges, and quick links
 │   │   ├── ScoreTable.jsx         # 9-component weighted aggregate breakdown table
@@ -80,13 +80,12 @@ tsdp-data-analysis-grading-portal/
 │   │   │   ├── GradeGroupPresentations.jsx
 │   │   │   ├── SoftSkillsEvaluation.jsx
 │   │   │   └── ApproveSocialMedia.jsx
-│   │   ├── admin/
-│   │   │   ├── AdminLogin.jsx
-│   │   │   ├── AdminDashboard.jsx
-│   │   │   ├── ManageStudents.jsx
-│   │   │   ├── ManageCoaches.jsx
-│   │   │   └── ViewReports.jsx
-│   │   └── Tutorial.jsx           # Technical documentation & guide
+│   │   └── admin/
+│   │       ├── AdminLogin.jsx
+│   │       ├── AdminDashboard.jsx
+│   │       ├── ManageStudents.jsx
+│   │       ├── ManageCoaches.jsx
+│   │       └── ViewReports.jsx
 │   ├── context/
 │   │   └── AuthContext.jsx        # Authentication and session persistence
 │   ├── services/

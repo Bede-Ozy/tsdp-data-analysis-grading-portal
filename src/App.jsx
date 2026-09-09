@@ -35,15 +35,13 @@ import ManageStudents from './pages/admin/ManageStudents';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
 
-// Tutorial Page
-import Tutorial from './pages/Tutorial';
 
 function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // Hide sidebar on public login pages and tutorial if desired
+  // Hide sidebar on public login pages
   const isLoginPage = location.pathname.includes('/login');
   const showSidebar = isAuthenticated && !isLoginPage;
 
@@ -77,10 +75,6 @@ function AppLayout({ children }) {
             <strong className="text-brand-neutral">ShamzBridge Consult</strong>
           </p>
           <div className="flex items-center gap-4">
-            <a href="/tutorial" className="hover:text-brand-primary underline font-medium">
-              Tutorial & Developer Guide
-            </a>
-            <span className="text-gray-300">·</span>
             <span>Data Analytics Portal v1.0</span>
           </div>
         </div>
@@ -109,8 +103,6 @@ export default function App() {
             {/* Root Route */}
             <Route path="/" element={<HomeRedirect />} />
 
-            {/* Public Tutorial Page */}
-            <Route path="/tutorial" element={<Tutorial />} />
 
             {/* Public Authentication Pages */}
             <Route path="/student/login" element={<StudentLogin />} />

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookOpen, User, Menu, X, ShieldCheck, GraduationCap, Award } from 'lucide-react';
+import { LogOut, User, Menu, X, ShieldCheck, GraduationCap, Award } from 'lucide-react';
 
 export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   const { user, role, logout, isAuthenticated } = useAuth();
@@ -123,17 +123,8 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
             </Link>
           </div>
 
-          {/* Right: Tutorial Link, Role Badge, User Info & Logout */}
+          {/* Right: Role Badge, User Info & Logout */}
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Tutorial Button */}
-            <Link
-              to="/tutorial"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-primary bg-brand-primary-light hover:bg-blue-100 rounded-lg transition-colors"
-              title="View Architecture & Tutorial Guide"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Tutorial & Docs</span>
-            </Link>
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-200">
