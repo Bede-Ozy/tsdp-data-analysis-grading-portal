@@ -44,7 +44,7 @@ export default function StudentLogin() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 py-8">
       <div className="w-full max-w-md">
         {/* Portal card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-brand-primary to-brand-primary-dark p-6 text-white text-center relative">
             <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-xs mx-auto flex items-center justify-center mb-3 text-white border border-white/20">

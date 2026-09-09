@@ -46,11 +46,26 @@ function AppLayout({ children }) {
   const showSidebar = isAuthenticated && !isLoginPage;
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col">
-      <Navbar
-        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-        isSidebarOpen={isSidebarOpen}
-      />
+    <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-x-hidden">
+      {/* Subtle, faint & fading background pattern for login pages */}
+      {isLoginPage && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-300"
+          style={{
+            backgroundImage: `radial-gradient(ellipse at center, rgba(248, 250, 252, 0.35) 0%, rgba(248, 250, 252, 0.9) 100%), url('/login-bg.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.22,
+          }}
+        />
+      )}
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar
+          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+          isSidebarOpen={isSidebarOpen}
+        />
 
       <div className="flex-1 flex">
         {showSidebar && (
@@ -68,7 +83,9 @@ function AppLayout({ children }) {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-brand-neutral-border py-4 text-center text-xs text-brand-neutral-muted">
+      <footer className={`border-t border-brand-neutral-border py-4 text-center text-xs text-brand-neutral-muted ${
+        isLoginPage ? 'bg-white/85 backdrop-blur-md' : 'bg-white'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
             © {new Date().getFullYear()} ITF-NECA Technical Skills Development Project (TSDP) · Powered by{' '}
@@ -85,6 +102,7 @@ function AppLayout({ children }) {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
