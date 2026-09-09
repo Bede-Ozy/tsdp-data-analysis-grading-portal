@@ -70,3 +70,4 @@ export function getGradeLetter(score) {
   if (num >= 45) return { letter: "D", label: "Pass", color: "text-orange-600 bg-orange-50 border-orange-200" };
   return { letter: "F", label: "Fail / Incomplete", color: "text-red-600 bg-red-50 border-red-200" };
 }
+

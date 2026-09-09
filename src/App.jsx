@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Components
@@ -63,7 +63,7 @@ function AppLayout({ children }) {
         <main className={`flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-200 ${
           showSidebar ? 'lg:pl-72' : 'max-w-7xl mx-auto w-full'
         }`}>
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
 

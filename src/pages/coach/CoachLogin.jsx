@@ -29,7 +29,11 @@ export default function CoachLogin() {
     try {
       const res = await loginCoach(coachNumber, email);
       if (res.success) {
-        navigate('/coach/dashboard');
+        if (res.isAdmin || res.role === 'admin' || res.target === '/admin/dashboard') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/coach/dashboard');
+        }
       } else {
         setError(res.message || 'Authentication failed. Please verify credentials.');
       }

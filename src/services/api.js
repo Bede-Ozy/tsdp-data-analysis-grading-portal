@@ -157,5 +157,8 @@ export const getPendingSubmissions = () =>
 export const getPendingSocialPosts = () => 
   callApi('getPendingSocialPosts', []);
 
-export const getAllCoaches = () =>
+export const getAllCoaches = () => 
   callApi('getAllCoaches', []);
+
+export const updateCoachStatus = (coachID, newStatus) => 
+  callApi('updateCoachStatus', [coachID, newStatus]);

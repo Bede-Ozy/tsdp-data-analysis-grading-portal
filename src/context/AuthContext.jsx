@@ -91,72 +91,113 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Coach Login — Maps exact backend return format
-  const loginCoach = async (coachNumber, email) => {
-    const cleanNum = String(coachNumber || '').trim();
+  // Shared Staff Authentication (Admin & Coach via COACHES_MASTER on backend)
+  const authenticateStaff = async (staffNumber, email, preferredRole = 'coach') => {
+    const cleanNum = String(staffNumber || '').trim();
     const cleanEmail = String(email || '').trim().toLowerCase();
 
+    if (!cleanNum) {
+      return { 
+        success: false, 
+        message: preferredRole === 'admin' 
+          ? 'Please enter your Admin Number (e.g., 002).' 
+          : 'Please enter your Coach Number (e.g., 001).' 
+      };
+    }
+
+    if (!cleanEmail) {
+      return { 
+        success: false, 
+        message: 'Please enter your registered email address.' 
+      };
+    }
+
     try {
-      const res = await apiCoachLogin(cleanNum, cleanEmail);
+      // Backend coachLogin function checks both TSDP2026-COA-XXX and TSDP2026-ADM-XXX
+      let res = await apiCoachLogin(cleanNum, cleanEmail);
+
+      // If direct numerical input didn't match directly, try formatting with prefix
+      if ((!res || !res.success) && !cleanNum.toUpperCase().startsWith('TSDP2026-')) {
+        const paddedNum = cleanNum.replace(/[^0-9]/g, '').padStart(3, '0');
+        if (preferredRole === 'admin') {
+          const admRes = await apiCoachLogin(`TSDP2026-ADM-${paddedNum}`, cleanEmail);
+          if (admRes && admRes.success) {
+            res = admRes;
+          }
+        } else {
+          const coaRes = await apiCoachLogin(`TSDP2026-COA-${paddedNum}`, cleanEmail);
+          if (coaRes && coaRes.success) {
+            res = coaRes;
+          }
+        }
+      }
 
       if (res && res.success) {
         const payload = res.data || res;
         const firstName = payload.firstName || '';
         const lastName = payload.lastName || '';
         const fullName = `${firstName} ${lastName}`.trim() || payload.name || payload.coachName || payload.fullName || '';
+        const roleStr = String(payload.role || '').trim();
+        const isAdmin = payload.isAdmin === true || roleStr.toLowerCase() === 'admin';
 
-        const coachData = {
-          coachID: payload.coachID || `TSDP2026-COA-${cleanNum.padStart(3, '0')}`,
-          coachNumber: cleanNum.padStart(3, '0'),
-          firstName: firstName,
-          lastName: lastName,
-          name: fullName || `Coach ${cleanNum}`,
-          email: payload.email || cleanEmail,
-          role: 'coach',
-          track: payload.track || payload.role || '',
-        };
-
-        setUser(coachData);
-        setRole('coach');
-        localStorage.setItem('tsdp_user', JSON.stringify(coachData));
-        localStorage.setItem('tsdp_role', 'coach');
-        return { success: true };
+        if (isAdmin) {
+          // Admin record from COACHES_MASTER
+          const adminData = {
+            coachID: payload.coachID || payload.adminID || (cleanNum.toUpperCase().startsWith('TSDP2026-ADM-') ? cleanNum : `TSDP2026-ADM-${cleanNum.padStart(3, '0')}`),
+            firstName: firstName,
+            lastName: lastName,
+            name: fullName || 'Administrator',
+            email: payload.email || cleanEmail,
+            role: 'Admin',
+            track: payload.track || '',
+            isAdmin: true,
+          };
+          setUser(adminData);
+          setRole('admin');
+          localStorage.setItem('tsdp_user', JSON.stringify(adminData));
+          localStorage.setItem('tsdp_role', 'admin');
+          return { success: true, role: 'admin', isAdmin: true, target: '/admin/dashboard', data: adminData };
+        } else {
+          // Coach record (e.g. Technical or Professional)
+          const coachData = {
+            coachID: payload.coachID || (cleanNum.toUpperCase().startsWith('TSDP2026-COA-') ? cleanNum : `TSDP2026-COA-${cleanNum.padStart(3, '0')}`),
+            coachNumber: cleanNum.padStart(3, '0'),
+            firstName: firstName,
+            lastName: lastName,
+            name: fullName || `Coach ${cleanNum}`,
+            email: payload.email || cleanEmail,
+            role: roleStr || 'Technical',
+            track: payload.track || roleStr || '',
+            isAdmin: false,
+          };
+          setUser(coachData);
+          setRole('coach');
+          localStorage.setItem('tsdp_user', JSON.stringify(coachData));
+          localStorage.setItem('tsdp_role', 'coach');
+          return { success: true, role: 'coach', isAdmin: false, target: '/coach/dashboard', data: coachData };
+        }
       }
 
       return {
         success: false,
-        message: res?.message || 'Login failed. Please verify your Coach Number and Email.'
+        message: res?.message || 'Invalid credentials. Please verify your ID Number and Email in COACHES_MASTER.'
       };
     } catch (err) {
       return {
         success: false,
-        message: err?.response?.data?.message || err.message || 'Unable to connect to grading backend. Please check network/deployment permissions.'
+        message: err?.response?.data?.message || err.message || 'Unable to connect to authentication backend. Please check network/deployment permissions.'
       };
     }
   };
 
-  // Admin Login
-  const loginAdmin = async (adminKey, email) => {
-    const cleanKey = String(adminKey || '').trim();
-    const cleanEmail = String(email || '').trim().toLowerCase();
+  // Coach Login
+  const loginCoach = async (coachNumber, email) => {
+    return authenticateStaff(coachNumber, email, 'coach');
+  };
 
-    if (cleanKey === 'ADMIN-2026' || cleanKey.toLowerCase() === 'admin') {
-      const adminData = {
-        adminID: 'TSDP2026-ADM-001',
-        name: 'System Administrator',
-        email: cleanEmail || 'admin@shamzbridge.com',
-        role: 'admin',
-      };
-      setUser(adminData);
-      setRole('admin');
-      localStorage.setItem('tsdp_user', JSON.stringify(adminData));
-      localStorage.setItem('tsdp_role', 'admin');
-      return { success: true };
-    }
-    return {
-      success: false,
-      message: 'Invalid Administrator key. Please check your credentials.'
-    };
+  // Admin Login (uses same coachLogin API against COACHES_MASTER)
+  const loginAdmin = async (adminNumber, email) => {
+    return authenticateStaff(adminNumber, email, 'admin');
   };
 
   // Logout

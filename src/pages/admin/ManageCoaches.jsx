@@ -1,210 +1,416 @@
 import React, { useState, useEffect } from 'react';
-import { getAllCoaches } from '../../services/api';
+import { getAllCoaches, updateCoachStatus } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import CustomSelect from '../../components/CustomSelect';
-import { UserCheck, Plus, Mail, Award, X, CheckCircle2 } from 'lucide-react';
+import { 
+  UserCheck, 
+  Mail, 
+  Phone,
+  Award, 
+  CheckCircle2, 
+  Search, 
+  Power, 
+  AlertCircle, 
+  RefreshCw, 
+  Users,
+  ShieldCheck,
+  UserX,
+  X
+} from 'lucide-react';
 
 export default function ManageCoaches() {
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [track, setTrack] = useState('Technical (Excel, SQL, PowerBI, Python)');
-  const [role, setRole] = useState('Technical Coach');
-  const [success, setSuccess] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [notification, setNotification] = useState(null);
+
+  const loadCoaches = async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setRefreshing(true);
+    }
+    try {
+      const response = await getAllCoaches();
+      if (response && Array.isArray(response)) {
+        setCoaches(response);
+      } else if (response && response.success && Array.isArray(response.data)) {
+        setCoaches(response.data);
+      } else if (response && response.success && Array.isArray(response.result)) {
+        setCoaches(response.result);
+      } else if (response && Array.isArray(response.coaches)) {
+        setCoaches(response.coaches);
+      } else {
+        setCoaches([]);
+      }
+    } catch (err) {
+      console.error('Error fetching coaches:', err);
+      setCoaches([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadCoaches() {
-      try {
-        const res = await getAllCoaches();
-        if (res && res.success && Array.isArray(res.data)) {
-          setCoaches(res.data);
-        }
-      } catch (err) {
-        console.error('Error fetching coaches:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadCoaches();
   }, []);
 
-  const handleAddCoach = (e) => {
-    e.preventDefault();
-    const newCoach = {
-      coachID: `TSDP2026-COA-${number.padStart(3, '0')}`,
-      coachNumber: number.padStart(3, '0'),
-      name,
-      email,
-      role,
-      track
-    };
+  const handleToggleStatus = async (coach) => {
+    const currentStatus = String(coach.status || 'Active').trim();
+    const newStatus = currentStatus.toLowerCase() === 'active' ? 'Inactive' : 'Active';
+    const fullName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || coach.coachID;
 
-    setCoaches(prev => [...prev, newCoach]);
-    setSuccess(`Successfully added ${name} to instructional staff.`);
-    setShowModal(false);
-    setName('');
-    setNumber('');
-    setEmail('');
+    setUpdatingId(coach.coachID);
+    setNotification(null);
+
+    try {
+      const res = await updateCoachStatus(coach.coachID, newStatus);
+      if (res && (res.success === true || !res.error)) {
+        setNotification({
+          type: 'success',
+          message: `Status for ${fullName} updated to ${newStatus}.`
+        });
+        await loadCoaches();
+      } else {
+        setNotification({
+          type: 'error',
+          message: res?.message || `Failed to update status for ${fullName}.`
+        });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        message: err.message || `Error updating status for ${fullName}.`
+      });
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading instructional staff roster..." />;
+    return <LoadingSpinner size="lg" text="Loading instructional staff from COACHES_MASTER..." />;
   }
+
+  // Filter coaches based on search query, role filter, and status filter
+  const filteredCoaches = coaches.filter(coach => {
+    const fullName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim();
+    const q = search.toLowerCase();
+    const matchSearch = (
+      fullName.toLowerCase().includes(q) ||
+      (coach.coachID && coach.coachID.toLowerCase().includes(q)) ||
+      (coach.email && coach.email.toLowerCase().includes(q)) ||
+      (coach.phone && String(coach.phone).includes(q)) ||
+      (coach.track && coach.track.toLowerCase().includes(q)) ||
+      (coach.role && coach.role.toLowerCase().includes(q))
+    );
+
+    const matchRole = roleFilter === 'All' || 
+      (coach.role && coach.role.toLowerCase() === roleFilter.toLowerCase());
+
+    const coachStatus = String(coach.status || 'Active').trim();
+    const matchStatus = statusFilter === 'All' ||
+      coachStatus.toLowerCase() === statusFilter.toLowerCase();
+
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  const activeCount = coaches.filter(c => String(c.status || '').toLowerCase() === 'active').length;
+  const inactiveCount = coaches.filter(c => String(c.status || '').toLowerCase() === 'inactive').length;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-brand-neutral">Manage Coaches & Instructors</h1>
           <p className="text-sm text-brand-neutral-muted mt-1">
-            Instructional team overseeing technical, professional, and capstone analytics tracks.
+            Real-time instructional and administrative team records from <strong className="font-mono text-slate-700">COACHES_MASTER</strong>.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowModal(true)}
-          className="btn-secondary py-2.5 px-4 font-bold shadow-md self-start sm:self-auto flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Coach</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => loadCoaches(true)}
+            disabled={refreshing}
+            className="btn-outline py-2 px-3 text-xs font-semibold flex items-center gap-1.5"
+            title="Refresh coach list from backend"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Syncing...' : 'Sync Database'}</span>
+          </button>
+        </div>
       </div>
 
-      {success && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-brand-success flex items-center gap-2 text-xs font-semibold">
-          <CheckCircle2 className="w-4 h-4 text-brand-primary" />
-          <span>{success}</span>
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="portal-card p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-100 text-brand-secondary flex items-center justify-center font-bold">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-brand-neutral-muted font-medium">Total Staff</p>
+            <p className="text-xl font-bold text-brand-neutral">{coaches.length}</p>
+          </div>
+        </div>
+
+        <div className="portal-card p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-brand-neutral-muted font-medium">Active Staff</p>
+            <p className="text-xl font-bold text-emerald-600">{activeCount}</p>
+          </div>
+        </div>
+
+        <div className="portal-card p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+            <UserX className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-brand-neutral-muted font-medium">Inactive Staff</p>
+            <p className="text-xl font-bold text-slate-700">{inactiveCount}</p>
+          </div>
+        </div>
+
+        <div className="portal-card p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-brand-primary flex items-center justify-center font-bold">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-brand-neutral-muted font-medium">Administrators</p>
+            <p className="text-xl font-bold text-brand-primary">
+              {coaches.filter(c => String(c.role || '').toLowerCase() === 'admin').length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications Alert */}
+      {notification && (
+        <div className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border ${
+          notification.type === 'error'
+            ? 'bg-red-50 border-red-200 text-brand-error'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+            )}
+            <span>{notification.message}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setNotification(null)}
+            className="text-slate-400 hover:text-slate-700 ml-4"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
+      {/* Controls Bar: Search + Filters */}
+      <div className="portal-card p-4 space-y-3">
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Search Input */}
+          <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search by name, Coach ID, email, or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-transparent border-none outline-none focus:ring-0 text-slate-800 placeholder-slate-400 text-sm p-0"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Role Filter */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            <span className="text-slate-400 font-medium whitespace-nowrap mr-1">Role:</span>
+            {['All', 'Technical', 'Admin', 'Professional'].map((role) => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => setRoleFilter(role)}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                  roleFilter === role
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            <span className="text-slate-400 font-medium whitespace-nowrap mr-1">Status:</span>
+            {['All', 'Active', 'Inactive'].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                  statusFilter === status
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Coaches Grid */}
-      {coaches.length === 0 ? (
-        <div className="portal-card text-center py-12 text-brand-neutral-muted">
-          <UserCheck className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-          <p className="font-semibold text-sm">No registered coaches found in database.</p>
+      {filteredCoaches.length === 0 ? (
+        <div className="portal-card text-center py-16 text-brand-neutral-muted space-y-3">
+          <UserCheck className="w-12 h-12 mx-auto text-slate-300" />
+          <p className="font-semibold text-base text-slate-700">
+            {coaches.length === 0 ? 'No coaches found in COACHES_MASTER.' : 'No coaches match your search filters.'}
+          </p>
+          {coaches.length === 0 ? (
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Please check your Google Sheet backend deployment and confirm that the <strong className="font-mono">COACHES_MASTER</strong> sheet contains records.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setSearch(''); setRoleFilter('All'); setStatusFilter('All'); }}
+              className="text-xs text-brand-primary underline"
+            >
+              Reset all filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {coaches.map((coach) => {
-            const cName = coach.name || `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || coach.coachID || 'Instructor';
+          {filteredCoaches.map((coach) => {
+            const fullName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || coach.coachID || 'Instructor';
+            const isActive = String(coach.status || 'Active').trim().toLowerCase() === 'active';
+            const isUpdating = updatingId === coach.coachID;
+
             return (
-              <div key={coach.coachID} className="portal-card border-l-4 border-l-brand-secondary space-y-4">
-                <div className="flex items-start justify-between">
+              <div 
+                key={coach.coachID} 
+                className={`portal-card border-l-4 space-y-4 transition-all ${
+                  isActive ? 'border-l-brand-primary' : 'border-l-slate-300 opacity-90'
+                }`}
+              >
+                {/* Header: Name, ID, Badges */}
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-brand-secondary flex items-center justify-center font-bold text-lg">
-                      {cName.charAt(0)}
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${
+                      coach.role?.toLowerCase() === 'admin'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-orange-100 text-brand-secondary'
+                    }`}>
+                      {(coach.firstName || coach.lastName || coach.coachID || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-brand-neutral">{cName}</h3>
-                      <p className="text-xs font-mono text-brand-primary font-bold">{coach.coachID}</p>
+                      <h3 className="text-base font-bold text-slate-900 leading-tight">
+                        {fullName}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono text-brand-primary font-bold">
+                          {coach.coachID}
+                        </span>
+                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                          coach.role?.toLowerCase() === 'admin'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : 'bg-blue-50 text-brand-primary border-blue-200'
+                        }`}>
+                          {coach.role || 'Staff'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <span className="badge-secondary text-[10px] uppercase font-bold">{coach.role || 'Coach'}</span>
+
+                  {/* Status Badge */}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span>{coach.status || 'Active'}</span>
+                  </span>
                 </div>
 
-                <div className="space-y-1.5 text-xs text-brand-neutral-muted bg-gray-50 p-3 rounded-xl border border-gray-100">
-                  <p className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-brand-neutral font-medium">{coach.email || '—'}</span>
+                {/* Details Box */}
+                <div className="space-y-2 text-xs text-brand-neutral-muted bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/60">
+                  {/* Email */}
+                  <p className="flex items-center gap-2 text-slate-700">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span className="font-medium truncate">{coach.email || 'No email registered'}</span>
                   </p>
-                  <p className="flex items-center gap-2">
-                    <Award className="w-3.5 h-3.5 text-gray-400" />
-                    <span>Track: <strong className="text-brand-neutral">{coach.track || 'Data Analytics'}</strong></span>
+
+                  {/* Phone */}
+                  {coach.phone && (
+                    <p className="flex items-center gap-2 text-slate-700">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      <span className="font-mono">{coach.phone}</span>
+                    </p>
+                  )}
+
+                  {/* Track Focus */}
+                  <p className="flex items-center gap-2 text-slate-700">
+                    <Award className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span>
+                      Track: <strong className="text-slate-900">{coach.track || (coach.role?.toLowerCase() === 'admin' ? 'Program Administration' : 'Data Analytics')}</strong>
+                    </span>
                   </p>
+
+                  {/* Notes (if any) */}
+                  {coach.notes && (
+                    <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/50">
+                      <span className="font-semibold text-slate-600">Notes:</span> {coach.notes}
+                    </p>
+                  )}
+                </div>
+
+                {/* Status Toggle Action Button */}
+                <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                  <span className="text-[11px] text-slate-500">
+                    Account Status: <strong className={isActive ? 'text-emerald-600' : 'text-slate-600'}>{isActive ? 'Active' : 'Inactive'}</strong>
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={isUpdating}
+                    onClick={() => handleToggleStatus(coach)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                      isActive
+                        ? 'border-red-200 text-red-600 bg-red-50/50 hover:bg-red-100/70 hover:border-red-300'
+                        : 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100/70 hover:border-emerald-300'
+                    } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={isActive ? `Deactivate ${fullName}` : `Activate ${fullName}`}
+                  >
+                    <Power className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
+                    <span>
+                      {isUpdating ? 'Updating...' : (isActive ? 'Deactivate' : 'Activate')}
+                    </span>
+                  </button>
                 </div>
               </div>
             );
           })}
-        </div>
-      )}
-
-
-      {/* Add Coach Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-brand-neutral-border pb-3">
-              <h3 className="text-base font-bold text-brand-neutral">Add New Instructor</h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-brand-neutral"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddCoach} className="space-y-4">
-              <div>
-                <label className="form-label">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Coach Adeleke"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Coach Number (3 digits)</label>
-                <input
-                  type="text"
-                  placeholder="e.g., 003"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  className="form-input font-mono"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="coach3@shamzbridge.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Track Focus</label>
-                <CustomSelect
-                  value={track}
-                  onChange={(val) => setTrack(val)}
-                  options={[
-                    'Technical (Excel, SQL, PowerBI, Python)',
-                    'Professional & Soft Skills',
-                    'Capstone & Data Modeling'
-                  ]}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-brand-neutral-border">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn-outline py-2 px-4 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-secondary py-2 px-5 text-xs font-bold"
-                >
-                  Add Coach
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>
