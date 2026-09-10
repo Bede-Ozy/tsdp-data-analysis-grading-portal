@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllStudents, getAllStudentsPerformance } from '../../services/api';
+import { getAllStudents, getAllCoaches, getAllStudentsPerformance } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
@@ -12,24 +12,35 @@ import {
   UserCheck,
   ShieldCheck,
   ChevronRight,
-  Sparkles,
-  ExternalLink
+  UserX,
+  ExternalLink,
+  Search
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [students, setStudents] = useState([]);
+  const [coaches, setCoaches] = useState([]);
+  const [studentsPerformance, setStudentsPerformance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await getAllStudents();
-        const list = Array.isArray(res) ? res : (res?.data || res?.students || []);
-        if (list.length > 0) {
-          setStudents(list);
-        }
+        const [stdsRes, coaRes, perfRes] = await Promise.all([
+          getAllStudents().catch(() => ({ success: false, data: [] })),
+          getAllCoaches().catch(() => ({ success: false, data: [] })),
+          getAllStudentsPerformance().catch(() => ({ success: false, data: [] }))
+        ]);
+
+        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || stdsRes?.students || []);
+        const coaList = Array.isArray(coaRes) ? coaRes : (coaRes?.data || coaRes?.coaches || coaRes?.result || []);
+        const perfList = Array.isArray(perfRes) ? perfRes : (perfRes?.data || perfRes?.result || []);
+
+        setStudents(stdsList);
+        setCoaches(coaList);
+        setStudentsPerformance(perfList);
       } catch (err) {
-        console.error('Failed to load students for admin dashboard:', err);
+        console.error('Failed to load data for admin dashboard:', err);
       } finally {
         setLoading(false);
       }
@@ -38,23 +49,37 @@ export default function AdminDashboard() {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading comprehensive administrative overview..." />;
+    return <LoadingSpinner size="lg" text="Loading administrative overview from live database..." />;
   }
 
-  const total = students.length;
-  const avgScore = total > 0 && students.some(s => s.overallScore !== undefined && s.overallScore !== null)
-    ? Math.round(students.reduce((sum, s) => sum + (s.overallScore || 0), 0) / total)
-    : null;
-  const avgAttendance = total > 0 && students.some(s => s.attendanceRate !== undefined && s.attendanceRate !== null)
-    ? Math.round(students.reduce((sum, s) => sum + (s.attendanceRate || 0), 0) / total)
-    : null;
-  const capstoneGroupCount = new Set(students.map(s => s.capstoneGroup).filter(Boolean)).size;
+  // 1. Total Students
+  const totalStudents = students.length;
 
-  // Sort top 5 performers
-  const topStudents = [...students]
-    .filter(s => s.overallScore !== undefined && s.overallScore !== null)
-    .sort((a, b) => (b.overallScore || 0) - (a.overallScore || 0))
-    .slice(0, 5);
+  // 2. Total Coaches
+  const totalCoaches = coaches.length;
+
+  // 3. Active Students
+  const activeStudents = students.filter(s => {
+    const st = String(s.status || '').trim().toLowerCase();
+    return st === 'active' || (st !== 'inactive' && st !== 'disabled');
+  }).length;
+
+  // 4. Active Coaches
+  const activeCoaches = coaches.filter(c => {
+    const st = String(c.status || '').trim().toLowerCase();
+    return st === 'active' || (st !== 'inactive' && st !== 'disabled');
+  }).length;
+
+  // 5. Class Average Score (Average of finalScore from getAllStudentsPerformance)
+  const validScores = studentsPerformance
+    .map(p => p.finalScore !== undefined && p.finalScore !== null ? Number(p.finalScore) : (p.overallScore !== undefined && p.overallScore !== null ? Number(p.overallScore) : null))
+    .filter(s => s !== null && !isNaN(s));
+
+  const classAvgScore = validScores.length > 0
+    ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length)
+    : (students.some(s => s.overallScore !== undefined && s.overallScore !== null)
+      ? Math.round(students.reduce((sum, s) => sum + (Number(s.overallScore) || 0), 0) / students.length)
+      : null);
 
   return (
     <div className="space-y-6">
@@ -70,7 +95,7 @@ export default function AdminDashboard() {
               Cohort Executive Dashboard
             </h1>
             <p className="text-xs sm:text-sm text-blue-100 max-w-xl">
-              Automated Analytics Grading & Performance Tracking System managed by ShamzBridge Consult.
+              Live program metrics, staff rosters, and resident performance aggregated from Google Sheets.
             </p>
           </div>
 
@@ -80,195 +105,123 @@ export default function AdminDashboard() {
               className="bg-white hover:bg-gray-100 text-brand-primary font-medium px-5 py-2.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-2 text-sm"
             >
               <FileBarChart className="w-4 h-4" />
-              <span>Full Performance Reports</span>
+              <span>Performance Reports</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* KPI Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Overview Cards — 5 Metrics requested */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total Students */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Residents</span>
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
             <Users className="w-4 h-4 text-brand-primary" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">{total}</span>
-            <span className="badge-primary text-[10px]">{total > 0 ? 'Enrolled' : 'No Records'}</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">{totalStudents}</span>
+            <span className="badge-primary text-[10px]">Roster</span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Active database roster</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Enrolled residents</p>
         </div>
 
+        {/* Total Coaches */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Cohort Mean Score</span>
-            <TrendingUp className="w-4 h-4 text-brand-secondary" />
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Coaches</span>
+            <UserCheck className="w-4 h-4 text-brand-secondary" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {avgScore !== null ? `${avgScore}%` : '—'}
-            </span>
-            {avgScore !== null && <span className="badge-secondary text-[10px]">Average</span>}
+            <span className="text-2xl sm:text-3xl font-semibold text-brand-secondary">{totalCoaches}</span>
+            <span className="badge-secondary text-[10px]">Faculty</span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Weighted across all 9 components</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">From COACHES_MASTER</p>
         </div>
 
+        {/* Active Students */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Average Attendance</span>
-            <Clock className="w-4 h-4 text-brand-primary" />
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Active Students</span>
+            <Users className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {avgAttendance !== null ? `${avgAttendance}%` : '—'}
-            </span>
-            {avgAttendance !== null && <span className="badge-success text-[10px]">Tracked</span>}
+            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeStudents}</span>
+            <span className="badge-success text-[10px]">Active</span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Punctuality compliance rate</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Status compliance</p>
         </div>
 
+        {/* Active Coaches */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Capstone Groups</span>
-            <Award className="w-4 h-4 text-brand-success" />
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Active Coaches</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-success">
-              {capstoneGroupCount > 0 ? capstoneGroupCount : '—'}
-            </span>
-            <span className="badge-success text-[10px]">Active Groups</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeCoaches}</span>
+            <span className="badge-success text-[10px]">Active</span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Resident project syndicates</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Operational staff</p>
+        </div>
+
+        {/* Class Average Score */}
+        <div className="portal-card col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
+            <TrendingUp className="w-4 h-4 text-brand-primary" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-semibold text-brand-primary">
+              {classAvgScore !== null ? `${classAvgScore}%` : '0%'}
+            </span>
+            {classAvgScore !== null && <span className="badge-primary text-[10px]">Cohort Mean</span>}
+          </div>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Across final scores</p>
         </div>
       </div>
 
-      {/* Two Column Section: Top Performers & Quick Admin Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top Performers Leaderboard */}
-        <div className="lg:col-span-2 portal-card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                <Award className="w-4 h-4 text-brand-secondary" />
-                <span>Cohort Top Performers Leaderboard</span>
-              </h3>
-              <p className="text-xs text-brand-neutral-muted">Leading residents based on overall weighted evaluation</p>
+      {/* Management Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link
+          to="/admin/students"
+          className="portal-card p-5 hover:border-brand-primary transition-all group flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">
+              <Users className="w-6 h-6" />
             </div>
-            <Link to="/admin/students" className="text-xs font-medium text-brand-primary hover:underline flex items-center gap-1">
-              <span>View All Residents</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="divide-y divide-gray-100">
-            {topStudents.length === 0 ? (
-              <p className="text-xs text-brand-neutral-muted py-8 text-center">
-                No resident performance data available from backend.
+            <div>
+              <h3 className="font-bold text-slate-800 group-hover:text-brand-primary text-base">
+                Manage Residents ({students.length})
+              </h3>
+              <p className="text-xs text-brand-neutral-muted mt-0.5">
+                Toggle Active/Inactive status, view groups, and inspect student records.
               </p>
-            ) : (
-              topStudents.map((s, idx) => {
-                const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.studentID;
-                const grade = getGradeLetter(s.overallScore);
-                return (
-                  <div key={s.studentID} className="py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center font-semibold text-xs ${
-                        idx === 0 ? 'bg-amber-100 text-amber-800' :
-                        idx === 1 ? 'bg-slate-200 text-slate-700' :
-                        idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        #{idx + 1}
-                      </span>
-                      <div>
-                        <span className="font-medium text-sm text-slate-800">{sName}</span>
-                        <span className="text-xs text-gray-400 block font-mono">
-                          {s.studentID}{s.classGroup ? ` · ${s.classGroup}` : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="font-semibold text-sm text-brand-primary">{s.overallScore}%</span>
-                        {s.attendanceRate !== undefined && s.attendanceRate !== null && (
-                          <span className="text-[10px] text-gray-400 block">Attendance: {s.attendanceRate}%</span>
-                        )}
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${grade.color}`}>
-                        {grade.letter}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+            </div>
           </div>
-        </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-brand-primary" />
+        </Link>
 
-
-        {/* Quick Management Links */}
-        <div className="portal-card space-y-4">
-          <h3 className="text-base font-semibold text-slate-800">Administrative Shortcuts</h3>
-
-          <div className="space-y-3">
-            <Link
-              to="/admin/students"
-              className="p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-primary hover:bg-brand-primary-light/30 transition-all flex items-center justify-between group shadow-xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-100 text-brand-primary flex items-center justify-center">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-medium text-sm text-slate-800 group-hover:text-brand-primary block">
-                    Manage Residents
-                  </span>
-                  <span className="text-xs text-brand-neutral-muted">
-                    {students.length > 0 ? `${students.length} enrolled residents` : 'View enrolled residents'}
-                  </span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-primary" />
-            </Link>
-
-            <Link
-              to="/admin/coaches"
-              className="p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-secondary hover:bg-orange-50/30 transition-all flex items-center justify-between group shadow-xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-orange-100 text-brand-secondary flex items-center justify-center">
-                  <UserCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-medium text-sm text-slate-800 group-hover:text-brand-secondary block">
-                    Manage Coaches
-                  </span>
-                  <span className="text-xs text-brand-neutral-muted">Technical & Professional Tutors</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-secondary" />
-            </Link>
-
-            <Link
-              to="/admin/reports"
-              className="p-3.5 rounded-xl border border-slate-200/80 hover:border-brand-success hover:bg-emerald-50/30 transition-all flex items-center justify-between group shadow-xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-brand-success flex items-center justify-center">
-                  <FileBarChart className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-medium text-sm text-slate-800 group-hover:text-brand-success block">
-                    Generate Reports
-                  </span>
-                  <span className="text-xs text-brand-neutral-muted">Export cohort CSV & summaries</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-success" />
-            </Link>
+        <Link
+          to="/admin/coaches"
+          className="portal-card p-5 hover:border-brand-secondary transition-all group flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-secondary flex items-center justify-center group-hover:bg-brand-secondary group-hover:text-white transition-colors">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 group-hover:text-brand-secondary text-base">
+                Manage Coaches ({coaches.length})
+              </h3>
+              <p className="text-xs text-brand-neutral-muted mt-0.5">
+                Toggle Active/Inactive status, assign tracks, and view faculty from COACHES_MASTER.
+              </p>
+            </div>
           </div>
-        </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-brand-secondary" />
+        </Link>
       </div>
     </div>
   );

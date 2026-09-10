@@ -162,3 +162,12 @@ export const getAllCoaches = () =>
 
 export const updateCoachStatus = (coachID, newStatus) => 
   callApi('updateCoachStatus', [coachID, newStatus]);
+
+export const updateStudentStatus = (studentID, newStatus) => 
+  callApi('updateStudentStatus', [studentID, newStatus]);
+
+export const getStudentAttendance = (studentID) => 
+  callApi('getStudentAttendance', [studentID]);
+
+export const getStudentClassActivities = (studentID) => 
+  callApi('getStudentClassActivities', [studentID]);

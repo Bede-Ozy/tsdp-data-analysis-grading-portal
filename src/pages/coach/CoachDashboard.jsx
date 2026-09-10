@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSubmissions, getPendingSocialPosts, getAllStudents } from '../../services/api';
-import { PROGRAM_INFO } from '../../utils/constants';
+import {
+  getAllStudents,
+  getAllStudentsPerformance,
+  getPendingSubmissions,
+  getPendingSocialPosts
+} from '../../services/api';
+import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   QrCode,
@@ -14,20 +19,22 @@ import {
   Smile,
   CheckCircle,
   Clock,
-  ArrowRight,
-  Sparkles,
   Award,
-  AlertTriangle,
+  TrendingUp,
   Pencil,
-  Check
+  Check,
+  Search,
+  ChevronRight
 } from 'lucide-react';
 
 export default function CoachDashboard() {
   const { user, updateUserProfile } = useAuth();
+  const [students, setStudents] = useState([]);
+  const [studentsPerformance, setStudentsPerformance] = useState([]);
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
-  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
 
@@ -42,18 +49,22 @@ export default function CoachDashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [subsRes, postsRes, stdsRes] = await Promise.all([
+        const [stdsRes, perfRes, subsRes, postsRes] = await Promise.all([
+          getAllStudents().catch(() => ({ success: false, data: [] })),
+          getAllStudentsPerformance().catch(() => ({ success: false, data: [] })),
           getPendingSubmissions().catch(() => ({ success: false, data: [] })),
-          getPendingSocialPosts().catch(() => ({ success: false, data: [] })),
-          getAllStudents().catch(() => ({ success: false, data: [] }))
+          getPendingSocialPosts().catch(() => ({ success: false, data: [] }))
         ]);
+
+        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || stdsRes?.students || []);
+        const perfList = Array.isArray(perfRes) ? perfRes : (perfRes?.data || perfRes?.result || []);
         const subsList = Array.isArray(subsRes) ? subsRes : (subsRes?.data || []);
         const postsList = Array.isArray(postsRes) ? postsRes : (postsRes?.data || []);
-        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || []);
 
-        setPendingSubmissions(subsList.filter(s => s.status === 'Ungraded'));
-        setPendingPosts(postsList.filter(p => p.status === 'Pending'));
         setStudents(stdsList);
+        setStudentsPerformance(perfList);
+        setPendingSubmissions(subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending'));
+        setPendingPosts(postsList.filter(p => p.status === 'Pending' || p.status === 'Submitted'));
       } catch (err) {
         console.error('Error loading coach dashboard:', err);
       } finally {
@@ -64,18 +75,70 @@ export default function CoachDashboard() {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading coach dashboard..." />;
+    return <LoadingSpinner size="lg" text="Loading coach operations console..." />;
   }
 
-  const avgScore = students.length > 0 && students.some(s => s.overallScore !== undefined && s.overallScore !== null)
-    ? Math.round(students.reduce((sum, s) => sum + (s.overallScore || 0), 0) / students.length)
+  // Calculate Class Average Score from getAllStudentsPerformance()
+  const validScores = studentsPerformance
+    .map(p => p.finalScore !== undefined && p.finalScore !== null ? Number(p.finalScore) : (p.overallScore !== undefined && p.overallScore !== null ? Number(p.overallScore) : null))
+    .filter(s => s !== null && !isNaN(s));
+
+  const classAvgScore = validScores.length > 0
+    ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length)
     : null;
 
-  const avgAttendance = students.length > 0 && students.some(s => s.attendanceRate !== undefined && s.attendanceRate !== null)
-    ? Math.round(students.reduce((sum, s) => sum + (s.attendanceRate || 0), 0) / students.length)
-    : null;
+  // Calculate Average Attendance from getAllStudentsPerformance() or students
+  const validAttendances = studentsPerformance
+    .map(p => p.attendanceRate !== undefined && p.attendanceRate !== null ? Number(p.attendanceRate) : (p.attendanceScore !== undefined && p.attendanceScore !== null ? Number(p.attendanceScore) : null))
+    .filter(a => a !== null && !isNaN(a));
+
+  const avgAttendance = validAttendances.length > 0
+    ? Math.round(validAttendances.reduce((sum, a) => sum + a, 0) / validAttendances.length)
+    : (students.some(s => s.attendanceRate !== undefined && s.attendanceRate !== null)
+      ? Math.round(students.reduce((sum, s) => sum + (Number(s.attendanceRate) || 0), 0) / students.length)
+      : null);
 
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Coach';
+
+  // Merge students with performance table
+  const combinedList = students.map(s => {
+    const perf = studentsPerformance.find(p => p.studentID === s.studentID) || {};
+    const finalScore = perf.finalScore !== undefined && perf.finalScore !== null
+      ? perf.finalScore
+      : (perf.overallScore ?? s.overallScore ?? null);
+    const rank = perf.rank || s.rank || null;
+    const grade = perf.grade || (finalScore !== null ? getGradeLetter(finalScore).letter : '—');
+    const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || perf.studentName || s.studentID;
+
+    return {
+      studentID: s.studentID,
+      name: sName,
+      classGroup: s.classGroup || perf.classGroup || '—',
+      finalScore: finalScore,
+      rank: rank,
+      grade: grade
+    };
+  });
+
+  const displayList = combinedList.length > 0
+    ? combinedList
+    : studentsPerformance.map(p => ({
+        studentID: p.studentID,
+        name: p.studentName || p.name || p.studentID,
+        classGroup: p.classGroup || '—',
+        finalScore: p.finalScore ?? p.overallScore ?? null,
+        rank: p.rank || null,
+        grade: p.grade || (p.finalScore ? getGradeLetter(p.finalScore).letter : '—')
+      }));
+
+  const filteredList = displayList.filter(item => {
+    const q = search.toLowerCase();
+    return (
+      (item.name && item.name.toLowerCase().includes(q)) ||
+      (item.studentID && item.studentID.toLowerCase().includes(q)) ||
+      (item.classGroup && item.classGroup.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -141,8 +204,24 @@ export default function CoachDashboard() {
         </div>
       </div>
 
-      {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Overview Cards — 5 Metrics requested */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total Students */}
+        <div className="portal-card">
+          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
+            <Users className="w-4 h-4 text-brand-primary" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+              {students.length}
+            </span>
+            <span className="badge-primary text-[10px]">Roster</span>
+          </div>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Active cohort enrollment</p>
+        </div>
+
+        {/* Pending Submissions */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
             <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Submissions</span>
@@ -158,12 +237,13 @@ export default function CoachDashboard() {
               <span className="text-xs text-brand-neutral-muted">All Graded</span>
             )}
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Technical & Professional files</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Assignments to grade</p>
         </div>
 
+        {/* Pending Social Posts */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Social Posts</span>
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Posts</span>
             <CheckCircle className="w-4 h-4 text-brand-primary" />
           </div>
           <div className="flex items-baseline gap-2">
@@ -171,51 +251,125 @@ export default function CoachDashboard() {
               {pendingPosts.length}
             </span>
             {pendingPosts.length > 0 ? (
-              <span className="badge-primary text-[10px]">Awaiting Score</span>
+              <span className="badge-primary text-[10px]">Pending</span>
             ) : (
-              <span className="text-xs text-brand-neutral-muted">None Pending</span>
+              <span className="text-xs text-brand-neutral-muted">Up to date</span>
             )}
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">LinkedIn & Twitter links</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">LinkedIn/Twitter shares</p>
         </div>
 
+        {/* Class Average Score */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Class Average Score</span>
-            <Award className="w-4 h-4 text-brand-success" />
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-success">
-              {avgScore !== null ? `${avgScore}%` : '—'}
+            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">
+              {classAvgScore !== null ? `${classAvgScore}%` : '0%'}
             </span>
-            {avgScore !== null && <span className="badge-success text-[10px]">Cohort Mean</span>}
+            {classAvgScore !== null && <span className="badge-success text-[10px]">Cohort Mean</span>}
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">
-            {students.length > 0 ? `Across ${students.length} enrolled residents` : 'No score data available'}
-          </p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">From final scores</p>
         </div>
 
-        <div className="portal-card">
+        {/* Average Attendance */}
+        <div className="portal-card col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Average Attendance</span>
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Avg Attendance</span>
             <Clock className="w-4 h-4 text-brand-primary" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {avgAttendance !== null ? `${avgAttendance}%` : '—'}
+              {avgAttendance !== null ? `${avgAttendance}%` : '0%'}
             </span>
-            {avgAttendance !== null && <span className="badge-success text-[10px]">Active</span>}
+            {avgAttendance !== null && <span className="badge-success text-[10px]">Tracked</span>}
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">
-            {students.length > 0 ? 'Punctuality compliance' : 'No attendance data available'}
-          </p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">Punctuality rate</p>
         </div>
       </div>
 
+      {/* Class Performance Table */}
+      <div className="portal-card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <span>Class Performance Table</span>
+            </h2>
+            <p className="text-xs text-brand-neutral-muted mt-0.5">Live resident performance from backend</p>
+          </div>
 
-      {/* Quick Action Matrix for Coach */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search resident or ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="text-xs py-1.5 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-brand-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          {filteredList.length === 0 ? (
+            <div className="py-12 text-center text-xs text-brand-neutral-muted">
+              No data available.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                  <th className="py-2.5 px-3">Student ID</th>
+                  <th className="py-2.5 px-3">Name</th>
+                  <th className="py-2.5 px-3">Class Group</th>
+                  <th className="py-2.5 px-3 text-center">Final Score</th>
+                  <th className="py-2.5 px-3 text-center">Rank</th>
+                  <th className="py-2.5 px-3 text-right">Grade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredList.map((st, idx) => {
+                  const hasScore = st.finalScore !== null && st.finalScore !== undefined;
+                  const grade = hasScore ? getGradeLetter(st.finalScore) : { letter: st.grade || '—', color: 'text-slate-500 bg-slate-50 border-slate-200' };
+
+                  return (
+                    <tr key={st.studentID || idx} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-3 font-mono font-medium text-brand-primary">
+                        {st.studentID}
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-slate-800">
+                        {st.name}
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">
+                        {st.classGroup}
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-slate-800">
+                        {hasScore ? `${st.finalScore}%` : '0%'}
+                      </td>
+                      <td className="py-3 px-3 text-center font-semibold text-brand-secondary">
+                        {st.rank ? `#${st.rank}` : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${grade.color}`}>
+                          {grade.letter}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Instructor Actions Matrix */}
       <div className="portal-card">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Instructor Grading & Evaluation Actions</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Instructor Grading & Evaluation Modules</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Link
             to="/coach/attendance-code"
@@ -229,7 +383,7 @@ export default function CoachDashboard() {
                 Attendance Code
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Broadcast 6-char passcode with 10-min countdown</p>
+            <p className="text-xs text-brand-neutral-muted">Broadcast 6-char session passcode</p>
           </Link>
 
           <Link
@@ -244,7 +398,7 @@ export default function CoachDashboard() {
                 Grade Submissions
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Review Drive solution files and score 0-10</p>
+            <p className="text-xs text-brand-neutral-muted">Review student files and score</p>
           </Link>
 
           <Link
@@ -259,7 +413,7 @@ export default function CoachDashboard() {
                 Record Class Activity
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Live question answers, forms, & hands-on exercises</p>
+            <p className="text-xs text-brand-neutral-muted">Live questions, exercises & drills</p>
           </Link>
 
           <Link
@@ -274,7 +428,7 @@ export default function CoachDashboard() {
                 Bulk Grade Projects
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Enter monthly module scores (0-100) for enrolled residents</p>
+            <p className="text-xs text-brand-neutral-muted">Monthly module milestone grades</p>
           </Link>
 
           <Link
@@ -289,7 +443,7 @@ export default function CoachDashboard() {
                 Capstone Sprints
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Presentation, Technical & Progress scores (0-50)</p>
+            <p className="text-xs text-brand-neutral-muted">Team sprint progress scoring</p>
           </Link>
 
           <Link
@@ -304,7 +458,7 @@ export default function CoachDashboard() {
                 Group Presentations
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">4 rubric criteria (1-5) plus individual Q&A scores</p>
+            <p className="text-xs text-brand-neutral-muted">4 rubric criteria + Q&A defense</p>
           </Link>
 
           <Link
@@ -319,7 +473,7 @@ export default function CoachDashboard() {
                 Soft Skills Evaluation
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">6 behavioral criteria (Communication, Teamwork, Leadership...)</p>
+            <p className="text-xs text-brand-neutral-muted">6 behavioral competency criteria</p>
           </Link>
 
           <Link
@@ -334,7 +488,7 @@ export default function CoachDashboard() {
                 Approve Social Posts
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Verify LinkedIn/Twitter URLs and award up to 5 points</p>
+            <p className="text-xs text-brand-neutral-muted">Verify LinkedIn/Twitter URLs</p>
           </Link>
         </div>
       </div>

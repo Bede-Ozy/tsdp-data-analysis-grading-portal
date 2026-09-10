@@ -278,7 +278,7 @@ export default function ManageCoaches() {
         </div>
       </div>
 
-      {/* Coaches Grid */}
+      {/* Coaches Table View */}
       {filteredCoaches.length === 0 ? (
         <div className="portal-card text-center py-16 text-brand-neutral-muted space-y-3">
           <UserCheck className="w-12 h-12 mx-auto text-slate-300" />
@@ -300,117 +300,81 @@ export default function ManageCoaches() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredCoaches.map((coach) => {
-            const fullName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || coach.coachID || 'Instructor';
-            const isActive = String(coach.status || 'Active').trim().toLowerCase() === 'active';
-            const isUpdating = updatingId === coach.coachID;
+        <div className="bg-white rounded-xl border border-brand-neutral-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-gray-100/80 border-b border-brand-neutral-border text-xs uppercase text-brand-neutral-muted font-bold">
+                  <th className="py-3 px-4">Coach ID</th>
+                  <th className="py-3 px-4">Name</th>
+                  <th className="py-3 px-4">Email</th>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Track</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center">Toggle Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredCoaches.map((coach) => {
+                  const fullName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || coach.coachID || 'Instructor';
+                  const isActive = String(coach.status || 'Active').trim().toLowerCase() === 'active';
+                  const isUpdating = updatingId === coach.coachID;
 
-            return (
-              <div 
-                key={coach.coachID} 
-                className={`portal-card border-l-4 space-y-4 transition-all ${
-                  isActive ? 'border-l-brand-primary' : 'border-l-slate-300 opacity-90'
-                }`}
-              >
-                {/* Header: Name, ID, Badges */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${
-                      coach.role?.toLowerCase() === 'admin'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-orange-100 text-brand-secondary'
-                    }`}>
-                      {(coach.firstName || coach.lastName || coach.coachID || 'C').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 leading-tight">
+                  return (
+                    <tr key={coach.coachID} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-xs text-brand-primary">
+                        {coach.coachID}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-brand-neutral">
                         {fullName}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-mono text-brand-primary font-bold">
-                          {coach.coachID}
-                        </span>
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-600">
+                        {coach.email || '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${
                           coach.role?.toLowerCase() === 'admin'
                             ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : 'bg-blue-50 text-brand-primary border-blue-200'
                         }`}>
                           {coach.role || 'Staff'}
                         </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                    <span>{coach.status || 'Active'}</span>
-                  </span>
-                </div>
-
-                {/* Details Box */}
-                <div className="space-y-2 text-xs text-brand-neutral-muted bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/60">
-                  {/* Email */}
-                  <p className="flex items-center gap-2 text-slate-700">
-                    <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <span className="font-medium truncate">{coach.email || 'No email registered'}</span>
-                  </p>
-
-                  {/* Phone */}
-                  {coach.phone && (
-                    <p className="flex items-center gap-2 text-slate-700">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="font-mono">{coach.phone}</span>
-                    </p>
-                  )}
-
-                  {/* Track Focus */}
-                  <p className="flex items-center gap-2 text-slate-700">
-                    <Award className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                    <span>
-                      Track: <strong className="text-slate-900">{coach.track || (coach.role?.toLowerCase() === 'admin' ? 'Program Administration' : 'Data Analytics')}</strong>
-                    </span>
-                  </p>
-
-                  {/* Notes (if any) */}
-                  {coach.notes && (
-                    <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/50">
-                      <span className="font-semibold text-slate-600">Notes:</span> {coach.notes}
-                    </p>
-                  )}
-                </div>
-
-                {/* Status Toggle Action Button */}
-                <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-                  <span className="text-[11px] text-slate-500">
-                    Account Status: <strong className={isActive ? 'text-emerald-600' : 'text-slate-600'}>{isActive ? 'Active' : 'Inactive'}</strong>
-                  </span>
-
-                  <button
-                    type="button"
-                    disabled={isUpdating}
-                    onClick={() => handleToggleStatus(coach)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                      isActive
-                        ? 'border-red-200 text-red-600 bg-red-50/50 hover:bg-red-100/70 hover:border-red-300'
-                        : 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100/70 hover:border-emerald-300'
-                    } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={isActive ? `Deactivate ${fullName}` : `Activate ${fullName}`}
-                  >
-                    <Power className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
-                    <span>
-                      {isUpdating ? 'Updating...' : (isActive ? 'Deactivate' : 'Activate')}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs font-medium text-slate-700">
+                        {coach.track || (coach.role?.toLowerCase() === 'admin' ? 'Administration' : 'Data Analytics')}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                          isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          <span>{coach.status || 'Active'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          disabled={isUpdating}
+                          onClick={() => handleToggleStatus(coach)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                            isActive
+                              ? 'border-red-200 text-red-600 bg-red-50/60 hover:bg-red-100'
+                              : 'border-emerald-200 text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100'
+                          } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={isActive ? `Deactivate ${fullName}` : `Activate ${fullName}`}
+                        >
+                          <Power className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
+                          <span>{isUpdating ? 'Updating...' : (isActive ? 'Deactivate' : 'Activate')}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

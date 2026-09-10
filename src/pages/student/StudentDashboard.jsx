@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentPerformance } from '../../services/api';
+import { getStudentPerformance, getStudentAttendance, getStudentClassActivities } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
+import ScoreTable from '../../components/ScoreTable';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   Calendar,
@@ -18,12 +19,17 @@ import {
   Sparkles,
   BookOpen,
   Pencil,
-  Check
+  Check,
+  Activity,
+  CheckSquare,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function StudentDashboard() {
   const { user, updateUserProfile } = useAuth();
   const [performance, setPerformance] = useState(null);
+  const [attendanceData, setAttendanceData] = useState(null);
+  const [classActivities, setClassActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -44,12 +50,38 @@ export default function StudentDashboard() {
           setLoading(false);
           return;
         }
-        const res = await getStudentPerformance(studentID);
-        if (res && res.success) {
-          setPerformance(res.data);
+
+        const [perfRes, attRes, actRes] = await Promise.all([
+          getStudentPerformance(studentID).catch(err => ({ success: false, error: err.message })),
+          getStudentAttendance(studentID).catch(err => ({ success: false, error: err.message })),
+          getStudentClassActivities(studentID).catch(err => ({ success: false, error: err.message }))
+        ]);
+
+        // 1. Performance Data
+        if (perfRes) {
+          const pData = perfRes.data || (perfRes.success ? perfRes : (perfRes.finalScore !== undefined || perfRes.overallScore !== undefined ? perfRes : null));
+          setPerformance(pData);
+        }
+
+        // 2. Attendance Data
+        if (attRes) {
+          const aData = attRes.data || (attRes.success ? attRes : (attRes.records || attRes.attendanceRate !== undefined ? attRes : null));
+          setAttendanceData(aData);
+        }
+
+        // 3. Class Activities
+        if (actRes) {
+          const list = Array.isArray(actRes)
+            ? actRes
+            : (Array.isArray(actRes.data)
+              ? actRes.data
+              : (Array.isArray(actRes.records)
+                ? actRes.records
+                : (Array.isArray(actRes.activities) ? actRes.activities : [])));
+          setClassActivities(list);
         }
       } catch (err) {
-        console.error('Error loading performance:', err);
+        console.error('Error loading student dashboard records:', err);
       } finally {
         setLoading(false);
       }
@@ -58,25 +90,82 @@ export default function StudentDashboard() {
   }, [user]);
 
   if (loading) {
-    return <LoadingSpinner size="lg" text="Loading resident dashboard..." />;
+    return <LoadingSpinner size="lg" text="Loading live performance records from backend..." />;
   }
 
-  const overallScore = performance?.overallScore !== undefined && performance?.overallScore !== null
-    ? performance.overallScore
-    : (user?.overallScore !== undefined && user?.overallScore !== null ? user.overallScore : null);
-  const gradeInfo = overallScore !== null ? getGradeLetter(overallScore) : { letter: "-", label: "Pending", color: "text-gray-500 bg-gray-50 border-gray-200" };
-  const attendanceRate = performance?.attendanceRate !== undefined && performance?.attendanceRate !== null
-    ? performance.attendanceRate
-    : (user?.attendanceRate !== undefined && user?.attendanceRate !== null ? user.attendanceRate : null);
-  const rank = performance?.rank || user?.rank || null;
+  // Hero Card Metrics
+  const overallScore = performance?.finalScore !== undefined && performance?.finalScore !== null
+    ? performance.finalScore
+    : (performance?.overallScore !== undefined && performance?.overallScore !== null ? performance.overallScore : null);
 
-  const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Resident Student';
+  const gradeLetter = performance?.grade || (overallScore !== null ? getGradeLetter(overallScore).letter : '—');
+  const gradeInfo = overallScore !== null
+    ? getGradeLetter(overallScore)
+    : { letter: gradeLetter, label: gradeLetter !== '—' ? 'Recorded' : 'Pending', color: 'text-gray-500 bg-gray-50 border-gray-200' };
+
+  const rank = performance?.rank ? `#${performance.rank}` : (user?.rank ? `#${user.rank}` : null);
+
+  const attendanceRate = attendanceData?.attendanceRate !== undefined && attendanceData?.attendanceRate !== null
+    ? attendanceData.attendanceRate
+    : (performance?.attendanceRate !== undefined && performance?.attendanceRate !== null ? performance.attendanceRate : null);
+
+  const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || performance?.studentName || 'Resident Student';
+  const studentIDDisplay = user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${user.studentNumber}` : 'Student');
+
+  // Attendance Records
+  const attendanceRecords = Array.isArray(attendanceData?.records)
+    ? attendanceData.records
+    : (Array.isArray(attendanceData)
+      ? attendanceData
+      : (Array.isArray(performance?.attendanceHistory) ? performance.attendanceHistory : []));
+
+  const presentCount = attendanceData?.presentCount !== undefined && attendanceData?.presentCount !== null
+    ? attendanceData.presentCount
+    : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'present').length;
+
+  const lateCount = attendanceData?.lateCount !== undefined && attendanceData?.lateCount !== null
+    ? attendanceData.lateCount
+    : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'late').length;
+
+  const totalDays = attendanceData?.totalDays !== undefined && attendanceData?.totalDays !== null
+    ? attendanceData.totalDays
+    : attendanceRecords.length;
+
+  // 9-Component Score Breakdown for ScoreTable
+  const scoreBreakdown = {
+    technicalAssignments: {
+      score: performance?.technicalAssignmentsScore ?? performance?.breakdown?.technicalAssignments?.score ?? null
+    },
+    professionalAssignments: {
+      score: performance?.professionalAssignmentsScore ?? performance?.breakdown?.professionalAssignments?.score ?? null
+    },
+    classActivities: {
+      score: performance?.classActivitiesScore ?? performance?.breakdown?.classActivities?.score ?? null
+    },
+    socialMedia: {
+      score: performance?.socialMediaScore ?? performance?.breakdown?.socialMedia?.score ?? null
+    },
+    moduleProjects: {
+      score: performance?.moduleProjectsScore ?? performance?.breakdown?.moduleProjects?.score ?? null
+    },
+    capstoneProjects: {
+      score: performance?.capstoneScore ?? performance?.breakdown?.capstoneProjects?.score ?? null
+    },
+    groupPresentations: {
+      score: performance?.groupPresentationsScore ?? performance?.breakdown?.groupPresentations?.score ?? null
+    },
+    attendance: {
+      score: performance?.attendanceScore ?? performance?.breakdown?.attendance?.score ?? attendanceRate
+    },
+    softSkills: {
+      score: performance?.softSkillsScore ?? performance?.breakdown?.softSkills?.score ?? null
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Welcome Hero Banner */}
       <div className="bg-gradient-to-r from-brand-primary via-brand-primary-dark to-[#002B54] rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
-        {/* Subtle decorative circles */}
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 -mb-10 w-32 h-32 bg-brand-secondary/20 rounded-full blur-xl pointer-events-none" />
 
@@ -84,7 +173,7 @@ export default function StudentDashboard() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-blue-100 text-xs font-semibold backdrop-blur-xs border border-white/10">
               <Sparkles className="w-3.5 h-3.5 text-brand-secondary" />
-              <span>Week {PROGRAM_INFO.currentWeek} of {PROGRAM_INFO.totalWeeks} · 4-Month Data Analytics</span>
+              <span>Week {PROGRAM_INFO.currentWeek} of {PROGRAM_INFO.totalWeeks} · Data Analytics Cohort</span>
             </div>
             {isEditingName ? (
               <form onSubmit={handleSaveName} className="flex items-center gap-2 pt-1">
@@ -123,7 +212,7 @@ export default function StudentDashboard() {
               </div>
             )}
             <p className="text-sm text-blue-100 max-w-xl">
-              Resident ID: <span className="font-mono font-medium text-white">{user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${user.studentNumber}` : '')}</span>
+              Resident ID: <span className="font-mono font-medium text-white">{studentIDDisplay}</span>
               {user?.classGroup && <span> · {user.classGroup}</span>}
               {user?.capstoneGroup && <span> · {user.capstoneGroup}</span>}
             </p>
@@ -143,7 +232,7 @@ export default function StudentDashboard() {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Overall Cumulative Score */}
+        {/* Overall Score */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
             <span className="text-xs font-medium text-slate-500 tracking-wide">Overall Score</span>
@@ -151,17 +240,15 @@ export default function StudentDashboard() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {overallScore !== null ? `${overallScore}%` : '—'}
+              {overallScore !== null ? `${overallScore}%` : '0%'}
             </span>
-            {overallScore !== null ? (
-              <span className={`px-2 py-0.5 rounded text-xs font-medium border ${gradeInfo.color}`}>
-                {gradeInfo.letter} ({gradeInfo.label})
-              </span>
-            ) : (
-              <span className="text-xs text-brand-neutral-muted">Pending</span>
-            )}
+            <span className={`px-2 py-0.5 rounded text-xs font-medium border ${gradeInfo.color}`}>
+              {gradeInfo.letter}
+            </span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Weighted across all 9 metrics</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">
+            {overallScore !== null ? 'Weighted across 9 syllabus metrics' : 'No graded submissions yet'}
+          </p>
         </div>
 
         {/* Cohort Rank */}
@@ -172,46 +259,45 @@ export default function StudentDashboard() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-secondary">
-              {rank ? `#${rank}` : '—'}
+              {rank || '—'}
             </span>
-            {rank && <span className="text-xs font-medium text-brand-neutral-muted">Cohort Standing</span>}
+            {rank && <span className="text-xs font-medium text-brand-neutral-muted">Standing</span>}
           </div>
           <p className="text-[11px] text-brand-neutral-muted mt-2">
-            {rank ? 'Active cohort performance ranking' : 'Rank calculated after grading'}
+            {rank ? 'Active cohort performance standing' : 'Rank calculated after grading'}
           </p>
         </div>
 
         {/* Attendance Rate */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Attendance</span>
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Attendance Rate</span>
             <Clock className="w-4 h-4 text-brand-primary" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {attendanceRate !== null ? `${attendanceRate}%` : '—'}
+              {attendanceRate !== null ? `${attendanceRate}%` : '0%'}
             </span>
             {attendanceRate !== null && <span className="badge-success text-[10px]">Tracked</span>}
           </div>
           <p className="text-[11px] text-brand-neutral-muted mt-2">
-            {attendanceRate !== null ? 'Punctuality threshold: 9:30 AM' : 'No attendance recorded yet'}
+            {totalDays > 0 ? `${presentCount} of ${totalDays} sessions attended` : 'No attendance recorded yet'}
           </p>
         </div>
 
-        {/* Module Progress */}
+        {/* Curriculum Progress */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Curriculum</span>
+            <span className="text-xs font-medium text-slate-500 tracking-wide">Curriculum Phase</span>
             <BookOpen className="w-4 h-4 text-brand-primary" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-xl sm:text-2xl font-semibold text-brand-neutral">Data Analytics</span>
             <span className="badge-primary text-[10px]">Week {PROGRAM_INFO.currentWeek}</span>
           </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Technical & Professional modules</p>
+          <p className="text-[11px] text-brand-neutral-muted mt-2">4-month professional specialization</p>
         </div>
       </div>
-
 
       {/* Quick Action Tasks Grid */}
       <div className="portal-card">
@@ -231,7 +317,7 @@ export default function StudentDashboard() {
                 Mark Attendance
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Enter today's 6-character session passcode</p>
+            <p className="text-xs text-brand-neutral-muted">Enter today's session passcode</p>
           </Link>
 
           <Link
@@ -246,7 +332,7 @@ export default function StudentDashboard() {
                 Submit Assignment
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Technical or Professional class homework</p>
+            <p className="text-xs text-brand-neutral-muted">Technical or Professional homework</p>
           </Link>
 
           <Link
@@ -261,7 +347,7 @@ export default function StudentDashboard() {
                 Submit Project
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Monthly milestone projects (Excel, SQL, PowerBI, Python)</p>
+            <p className="text-xs text-brand-neutral-muted">Monthly milestone projects</p>
           </Link>
 
           <Link
@@ -276,82 +362,164 @@ export default function StudentDashboard() {
                 Social Media Post
               </span>
             </div>
-            <p className="text-xs text-brand-neutral-muted">Submit LinkedIn or Twitter post URLs for 5% weight</p>
+            <p className="text-xs text-brand-neutral-muted">Submit LinkedIn or Twitter post links</p>
           </Link>
         </div>
       </div>
 
-      {/* Recent Feedback & Attendance History Preview */}
+      {/* 9 Component Score Breakdown Table */}
+      <div className="space-y-2">
+        <ScoreTable breakdown={scoreBreakdown} totalScore={overallScore} />
+      </div>
+
+      {/* Two Detailed Live Sections: Attendance History & Class Activities */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Feedback */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Recent Coach Feedback</h3>
-            <Link to="/student/performance" className="text-xs font-medium text-brand-primary hover:underline flex items-center gap-1">
-              <span>View All</span>
+        {/* Attendance History Section */}
+        <div className="portal-card space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-brand-primary" />
+                <span>Attendance History</span>
+              </h3>
+              <p className="text-xs text-brand-neutral-muted mt-0.5">Live records from backend ATTENDANCE sheet</p>
+            </div>
+            <Link to="/student/attendance" className="text-xs font-medium text-brand-primary hover:underline flex items-center gap-1">
+              <span>Mark</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {performance?.recentFeedback && performance.recentFeedback.length > 0 ? (
-              performance.recentFeedback.map((fb, idx) => (
-                <div key={idx} className="p-3.5 bg-gray-50 rounded-xl border border-gray-100 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-xs text-brand-neutral">{fb.item}</span>
-                    <span className="badge-primary font-mono">{fb.score}</span>
-                  </div>
-                  <p className="text-xs text-brand-neutral-muted italic">"{fb.note}"</p>
-                  <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1">
-                    <span>{fb.from}</span>
-                    <span>{fb.date}</span>
-                  </div>
-                </div>
-              ))
+          {/* Attendance Stats Bar */}
+          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-center">
+            <div>
+              <span className="text-[11px] text-slate-500 font-medium block">Present</span>
+              <span className="text-base font-bold text-emerald-600">{presentCount}</span>
+            </div>
+            <div>
+              <span className="text-[11px] text-slate-500 font-medium block">Late</span>
+              <span className="text-base font-bold text-amber-600">{lateCount}</span>
+            </div>
+            <div>
+              <span className="text-[11px] text-slate-500 font-medium block">Total Days</span>
+              <span className="text-base font-bold text-slate-800">{totalDays}</span>
+            </div>
+          </div>
+
+          {/* Attendance Table */}
+          <div className="overflow-x-auto">
+            {attendanceRecords.length === 0 ? (
+              <div className="py-8 text-center text-xs text-brand-neutral-muted">
+                No attendance records yet.
+              </div>
             ) : (
-              <p className="text-xs text-brand-neutral-muted">No recent feedback recorded.</p>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                    <th className="py-2 px-2">Date</th>
+                    <th className="py-2 px-2 text-center">Week</th>
+                    <th className="py-2 px-2 text-center">Day</th>
+                    <th className="py-2 px-2">Session</th>
+                    <th className="py-2 px-2 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {attendanceRecords.map((att, idx) => {
+                    const isPresent = String(att.status || '').toLowerCase() === 'present';
+                    const isLate = String(att.status || '').toLowerCase() === 'late';
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-2.5 px-2 font-medium text-slate-800">
+                          {att.date || att.timestamp || '—'}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-slate-600">
+                          {att.weekNumber ?? att.week ?? '—'}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-slate-600">
+                          {att.dayNumber ?? att.day ?? '—'}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-600 font-medium">
+                          {att.sessionType || 'Physical'}
+                        </td>
+                        <td className="py-2.5 px-2 text-right">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                            isPresent
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : (isLate ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200')
+                          }`}>
+                            {att.status || 'Present'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
 
-        {/* Recent Attendance Log */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold text-brand-neutral">Attendance Log</h3>
-            <Link to="/student/attendance" className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1">
-              <span>Mark Today</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
+        {/* Class Activities Section */}
+        <div className="portal-card space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-brand-secondary" />
+                <span>Class Activities</span>
+              </h3>
+              <p className="text-xs text-brand-neutral-muted mt-0.5">Live participation records from backend CLASS_ACTIVITIES</p>
+            </div>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-brand-secondary border border-orange-200">
+              {classActivities.length} Recorded
+            </span>
           </div>
 
-          <div className="space-y-2">
-            {performance?.attendanceHistory && performance.attendanceHistory.length > 0 ? (
-              performance.attendanceHistory.slice(0, 4).map((att, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/60 text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-2 h-2 rounded-full ${att.status === 'Present' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                    <div>
-                      <span className="font-bold text-brand-neutral">Week {att.week} · Day {att.day}</span>
-                      <span className="text-gray-400 ml-2">({att.sessionType})</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-[11px]">{att.arrivalTime}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      att.status === 'Present'
-                        ? 'bg-blue-50 text-brand-success border border-blue-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200'
-                    }`}>
-                      {att.status}
-                    </span>
-                  </div>
-                </div>
-              ))
+          <div className="overflow-x-auto">
+            {classActivities.length === 0 ? (
+              <div className="py-12 text-center text-xs text-brand-neutral-muted">
+                No class activities recorded yet.
+              </div>
             ) : (
-              <p className="text-xs text-brand-neutral-muted py-3 text-center">No attendance logs recorded yet.</p>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                    <th className="py-2 px-2 text-center">W / D</th>
+                    <th className="py-2 px-2">Activity Title</th>
+                    <th className="py-2 px-2">Type</th>
+                    <th className="py-2 px-2 text-center">Tool</th>
+                    <th className="py-2 px-2 text-right">Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {classActivities.map((act, idx) => {
+                    const score = act.score !== undefined && act.score !== null ? act.score : '—';
+                    const maxScore = act.maxScore !== undefined && act.maxScore !== null ? act.maxScore : 100;
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-2.5 px-2 text-center font-mono text-slate-600">
+                          W{act.weekNumber ?? act.week ?? '—'} D{act.dayNumber ?? act.day ?? '—'}
+                        </td>
+                        <td className="py-2.5 px-2 font-medium text-slate-800">
+                          {act.activityTitle || act.title || 'Class Activity'}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-600">
+                          {act.activityType || act.type || 'In-class'}
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700">
+                            {act.tool || 'Analytics'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-semibold text-brand-primary">
+                          {score !== '—' ? `${score}/${maxScore}` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
-
         </div>
       </div>
     </div>
