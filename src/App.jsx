@@ -6,6 +6,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Error Page
+import ErrorPage from './pages/ErrorPage';
 
 // Student Pages
 import StudentLogin from './pages/student/StudentLogin';
@@ -122,10 +126,15 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppLayout>
+        <ErrorBoundary>
           <Routes>
-            {/* Root Route */}
-            <Route path="/" element={<HomeRedirect />} />
+            {/* Standalone Full-Width Full-Height Error Page (No Sidebar) */}
+            <Route path="/error" element={<ErrorPage />} />
+
+            {/* Portal Application Layout with Navbar & Sidebar */}
+            <Route element={<AppLayout />}>
+              {/* Root Route */}
+              <Route path="/" element={<HomeRedirect />} />
 
 
             {/* Public Authentication Pages */}
@@ -290,11 +299,12 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            </Route>
 
-            {/* Fallback Catch-All */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Standalone Catch-All 404 (No Sidebar, Full Width & Height) */}
+            <Route path="*" element={<ErrorPage source="page" />} />
           </Routes>
-        </AppLayout>
+        </ErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

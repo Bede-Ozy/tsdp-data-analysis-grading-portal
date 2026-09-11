@@ -86,8 +86,9 @@ export default function ManageStudents() {
     setLoadingPerf(true);
     try {
       const res = await getStudentPerformance(student.studentID);
-      if (res && res.success) {
-        setStudentPerf(res.data);
+      const perfData = res?.data || (res?.studentID || res?.finalScore !== undefined || res?.overallScore !== undefined ? res : null);
+      if (perfData) {
+        setStudentPerf(perfData);
       }
     } catch (err) {
       console.error(err);
@@ -365,6 +366,7 @@ export default function ManageStudents() {
             ) : (
               <div className="space-y-5">
                 <ScoreTable
+                  performance={studentPerf}
                   breakdown={studentPerf?.breakdown}
                   totalScore={studentPerf?.finalScore || studentPerf?.overallScore || selectedStudent.overallScore}
                 />

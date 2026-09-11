@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentPerformance } from '../../services/api';
+import { getStudentPerformance, getStudentAttendance } from '../../services/api';
 import { getGradeLetter, PROGRAM_INFO } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -9,6 +9,7 @@ import { Award, Clock, Calendar, CheckCircle2, TrendingUp, AlertCircle, FileText
 export default function ViewPerformance() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [attendanceData, setAttendanceData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,9 +20,19 @@ export default function ViewPerformance() {
           setLoading(false);
           return;
         }
-        const res = await getStudentPerformance(studentID);
-        if (res && res.success) {
-          setData(res.data);
+        const [perfRes, attRes] = await Promise.all([
+          getStudentPerformance(studentID).catch(err => null),
+          getStudentAttendance(studentID).catch(err => null)
+        ]);
+
+        if (perfRes) {
+          const pData = perfRes.data || (perfRes.studentID || perfRes.finalScore !== undefined || perfRes.overallScore !== undefined ? perfRes : null);
+          setData(pData);
+        }
+
+        if (attRes) {
+          const aData = attRes.data || (attRes.records || attRes.attendanceRate !== undefined ? attRes : null);
+          setAttendanceData(aData);
         }
       } catch (err) {
         console.error(err);
@@ -36,19 +47,70 @@ export default function ViewPerformance() {
     return <LoadingSpinner size="lg" text="Loading comprehensive performance records..." />;
   }
 
-  const overallScore = data?.overallScore !== undefined && data?.overallScore !== null
-    ? data.overallScore
-    : (user?.overallScore !== undefined && user?.overallScore !== null ? user.overallScore : null);
-  const gradeInfo = overallScore !== null ? getGradeLetter(overallScore) : { letter: "-", label: "Pending", color: "text-gray-500 bg-gray-50 border-gray-200" };
+  const overallScore = data?.finalScore !== undefined && data?.finalScore !== null
+    ? data.finalScore
+    : (data?.overallScore !== undefined && data?.overallScore !== null
+      ? data.overallScore
+      : (user?.overallScore !== undefined && user?.overallScore !== null ? user.overallScore : null));
+
+  const gradeLetter = data?.grade || (overallScore !== null ? getGradeLetter(overallScore).letter : '—');
+  const gradeInfo = overallScore !== null
+    ? getGradeLetter(overallScore)
+    : { letter: gradeLetter, label: gradeLetter !== '—' ? 'Recorded' : 'Pending', color: 'text-gray-500 bg-gray-50 border-gray-200' };
+
   const rank = data?.rank || user?.rank || null;
-  const attendanceRate = data?.attendanceRate !== undefined && data?.attendanceRate !== null
-    ? data.attendanceRate
-    : (user?.attendanceRate !== undefined && user?.attendanceRate !== null ? user.attendanceRate : null);
+
+  // Attendance Records & Counts
+  const attendanceRecords = Array.isArray(attendanceData?.records)
+    ? attendanceData.records
+    : (Array.isArray(attendanceData)
+      ? attendanceData
+      : (Array.isArray(data?.attendanceHistory) ? data.attendanceHistory : []));
+
+  const presentCount = attendanceData?.presentCount !== undefined && attendanceData?.presentCount !== null
+    ? attendanceData.presentCount
+    : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'present').length;
+
+  const lateCount = attendanceData?.lateCount !== undefined && attendanceData?.lateCount !== null
+    ? attendanceData.lateCount
+    : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'late').length;
+
+  const attendedCount = presentCount + lateCount;
+  const totalDays = attendanceData?.totalDays !== undefined && attendanceData?.totalDays !== null
+    ? attendanceData.totalDays
+    : Math.max(attendanceRecords.length, attendedCount);
+  const effectiveTotalDays = Math.max(totalDays, attendedCount);
+
+  const overallAttendanceRate = effectiveTotalDays > 0
+    ? Math.round((attendedCount / effectiveTotalDays) * 100)
+    : (data?.attendanceRate !== undefined && data?.attendanceRate !== null ? data.attendanceRate : null);
 
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || data?.studentName || 'Resident Student';
   const studentID = data?.studentID || user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${user.studentNumber}` : '');
   const classGroup = user?.classGroup || data?.classGroup || '';
   const capstoneGroup = user?.capstoneGroup || data?.capstoneGroup || '';
+
+  const formatAttendanceDate = (val) => {
+    if (!val) return '—';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return String(val);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return String(val);
+    }
+  };
+
+  const formatAttendanceTime = (val) => {
+    if (!val) return '';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch {
+      return '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -85,8 +147,8 @@ export default function ViewPerformance() {
         </div>
       </div>
 
-      {/* 9 Component Breakdown ScoreTable */}
-      <ScoreTable breakdown={data?.breakdown} totalScore={overallScore} />
+      {/* 9 Component Score Breakdown Table */}
+      <ScoreTable performance={data} totalScore={overallScore} />
 
       {/* Attendance & Coach Feedback Logs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -98,27 +160,38 @@ export default function ViewPerformance() {
               <span>Attendance History</span>
             </h3>
             <span className="text-xs font-medium text-slate-500">
-              Cumulative: <strong className="text-slate-800 font-semibold">{attendanceRate !== null ? `${attendanceRate}%` : '—'}</strong>
+              Cumulative: <strong className="text-slate-800 font-semibold">{overallAttendanceRate !== null ? `${overallAttendanceRate}%` : '—'}</strong>
             </span>
           </div>
 
           <div className="space-y-2">
-            {data?.attendanceHistory && data.attendanceHistory.length > 0 ? (
-              data.attendanceHistory.map((att, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/60 text-xs">
-                  <div>
-                    <div className="font-medium text-slate-800">Week {att.week} · Day {att.day} ({att.sessionType})</div>
-                    <span className="text-slate-400 text-[11px]">{att.date} at {att.arrivalTime}</span>
+            {attendanceRecords.length > 0 ? (
+              attendanceRecords.map((att, idx) => {
+                const isPresent = String(att.status || '').toLowerCase() === 'present';
+                const isLate = String(att.status || '').toLowerCase() === 'late';
+                const dateFormatted = formatAttendanceDate(att.date || att.timestamp);
+                const timeFormatted = formatAttendanceTime(att.date || att.timestamp);
+
+                return (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/60 text-xs">
+                    <div>
+                      <div className="font-medium text-slate-800">
+                        Week {att.weekNumber ?? att.week ?? '—'} · Day {att.dayNumber ?? att.day ?? '—'} ({att.sessionType || 'Physical'})
+                      </div>
+                      <span className="text-slate-400 text-[11px]">
+                        {dateFormatted} {timeFormatted ? `at ${timeFormatted}` : ''}
+                      </span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded text-xs font-medium border ${
+                      isPresent
+                        ? 'bg-blue-50 text-brand-success border-blue-200'
+                        : (isLate ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200')
+                    }`}>
+                      {att.status || 'Present'}
+                    </span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded text-xs font-medium ${
-                    att.status === 'Present'
-                      ? 'bg-blue-50 text-brand-success border border-blue-200'
-                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                  }`}>
-                    {att.status}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-xs text-brand-neutral-muted py-6 text-center">No attendance records found.</p>
             )}

@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import {
-  getAllStudents,
-  getAllStudentsPerformance,
-  getPendingSubmissions,
-  getPendingSocialPosts
-} from '../../services/api';
+import { getCoachDashboard } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { CardSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
 import {
   QrCode,
   CheckSquare,
@@ -48,23 +43,21 @@ export default function CoachDashboard() {
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
-        const [stdsRes, perfRes, subsRes, postsRes] = await Promise.all([
-          getAllStudents().catch(() => ({ success: false, data: [] })),
-          getAllStudentsPerformance().catch(() => ({ success: false, data: [] })),
-          getPendingSubmissions().catch(() => ({ success: false, data: [] })),
-          getPendingSocialPosts().catch(() => ({ success: false, data: [] }))
-        ]);
+        const res = await getCoachDashboard();
+        if (res && res.success !== false) {
+          const payload = res.data || res;
+          const stdsList = payload.students || [];
+          const perfList = payload.performance || payload.studentsPerformance || [];
+          const subsList = payload.submissions || payload.pendingSubmissions || [];
+          const postsList = payload.socialPosts || payload.pendingPosts || [];
 
-        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || stdsRes?.students || []);
-        const perfList = Array.isArray(perfRes) ? perfRes : (perfRes?.data || perfRes?.result || []);
-        const subsList = Array.isArray(subsRes) ? subsRes : (subsRes?.data || []);
-        const postsList = Array.isArray(postsRes) ? postsRes : (postsRes?.data || []);
-
-        setStudents(stdsList);
-        setStudentsPerformance(perfList);
-        setPendingSubmissions(subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending'));
-        setPendingPosts(postsList.filter(p => p.status === 'Pending' || p.status === 'Submitted'));
+          setStudents(Array.isArray(stdsList) ? stdsList : []);
+          setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
+          setPendingSubmissions(Array.isArray(subsList) ? subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending') : []);
+          setPendingPosts(Array.isArray(postsList) ? postsList.filter(p => p.status === 'Pending' || p.status === 'Submitted') : []);
+        }
       } catch (err) {
         console.error('Error loading coach dashboard:', err);
       } finally {
@@ -73,10 +66,6 @@ export default function CoachDashboard() {
     }
     loadData();
   }, []);
-
-  if (loading) {
-    return <LoadingSpinner size="lg" text="Loading coach operations console..." />;
-  }
 
   // Calculate Class Average Score from getAllStudentsPerformance()
   const validScores = studentsPerformance
@@ -204,168 +193,183 @@ export default function CoachDashboard() {
         </div>
       </div>
 
-      {/* KPI Overview Cards — 5 Metrics requested */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Total Students */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
-            <Users className="w-4 h-4 text-brand-primary" />
+      {loading ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {students.length}
-            </span>
-            <span className="badge-primary text-[10px]">Roster</span>
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Active cohort enrollment</p>
+          <TableSkeleton rows={8} />
         </div>
+      ) : (
+        <>
+          {/* KPI Overview Cards — 5 Metrics requested */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* Total Students */}
+            <div className="portal-card">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
+                <Users className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+                  {students.length}
+                </span>
+                <span className="badge-primary text-[10px]">Roster</span>
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">Active cohort enrollment</p>
+            </div>
 
-        {/* Pending Submissions */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Submissions</span>
-            <CheckSquare className="w-4 h-4 text-brand-secondary" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {pendingSubmissions.length}
-            </span>
-            {pendingSubmissions.length > 0 ? (
-              <span className="badge-secondary text-[10px]">Needs Review</span>
-            ) : (
-              <span className="text-xs text-brand-neutral-muted">All Graded</span>
-            )}
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Assignments to grade</p>
-        </div>
+            {/* Pending Submissions */}
+            <div className="portal-card">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Submissions</span>
+                <CheckSquare className="w-4 h-4 text-brand-secondary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+                  {pendingSubmissions.length}
+                </span>
+                {pendingSubmissions.length > 0 ? (
+                  <span className="badge-secondary text-[10px]">Needs Review</span>
+                ) : (
+                  <span className="text-xs text-brand-neutral-muted">All Graded</span>
+                )}
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">Assignments to grade</p>
+            </div>
 
-        {/* Pending Social Posts */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Posts</span>
-            <CheckCircle className="w-4 h-4 text-brand-primary" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {pendingPosts.length}
-            </span>
-            {pendingPosts.length > 0 ? (
-              <span className="badge-primary text-[10px]">Pending</span>
-            ) : (
-              <span className="text-xs text-brand-neutral-muted">Up to date</span>
-            )}
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">LinkedIn/Twitter shares</p>
-        </div>
+            {/* Pending Social Posts */}
+            <div className="portal-card">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Pending Posts</span>
+                <CheckCircle className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+                  {pendingPosts.length}
+                </span>
+                {pendingPosts.length > 0 ? (
+                  <span className="badge-primary text-[10px]">Pending</span>
+                ) : (
+                  <span className="text-xs text-brand-neutral-muted">Up to date</span>
+                )}
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">LinkedIn/Twitter shares</p>
+            </div>
 
-        {/* Class Average Score */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">
-              {classAvgScore !== null ? `${classAvgScore}%` : '0%'}
-            </span>
-            {classAvgScore !== null && <span className="badge-success text-[10px]">Cohort Mean</span>}
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">From final scores</p>
-        </div>
+            {/* Class Average Score */}
+            <div className="portal-card">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">
+                  {classAvgScore !== null ? `${classAvgScore}%` : '—'}
+                </span>
+                {classAvgScore !== null && <span className="badge-success text-[10px]">Cohort Mean</span>}
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">From final scores</p>
+            </div>
 
-        {/* Average Attendance */}
-        <div className="portal-card col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Avg Attendance</span>
-            <Clock className="w-4 h-4 text-brand-primary" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {avgAttendance !== null ? `${avgAttendance}%` : '0%'}
-            </span>
-            {avgAttendance !== null && <span className="badge-success text-[10px]">Tracked</span>}
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Punctuality rate</p>
-        </div>
-      </div>
-
-      {/* Class Performance Table */}
-      <div className="portal-card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-              <span>Class Performance Table</span>
-            </h2>
-            <p className="text-xs text-brand-neutral-muted mt-0.5">Live resident performance from backend</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search resident or ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="text-xs py-1.5 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-brand-primary"
-              />
+            {/* Average Attendance */}
+            <div className="portal-card col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Avg Attendance</span>
+                <Clock className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+                  {avgAttendance !== null ? `${avgAttendance}%` : '—'}
+                </span>
+                {avgAttendance !== null && <span className="badge-success text-[10px]">Tracked</span>}
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">Punctuality rate</p>
             </div>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          {filteredList.length === 0 ? (
-            <div className="py-12 text-center text-xs text-brand-neutral-muted">
-              No data available.
+          {/* Class Performance Table */}
+          <div className="portal-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <span>Class Performance Table</span>
+                </h2>
+                <p className="text-xs text-brand-neutral-muted mt-0.5">Live resident performance from backend</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search resident or ID..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="text-xs py-1.5 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-brand-primary"
+                  />
+                </div>
+              </div>
             </div>
-          ) : (
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
-                  <th className="py-2.5 px-3">Student ID</th>
-                  <th className="py-2.5 px-3">Name</th>
-                  <th className="py-2.5 px-3">Class Group</th>
-                  <th className="py-2.5 px-3 text-center">Final Score</th>
-                  <th className="py-2.5 px-3 text-center">Rank</th>
-                  <th className="py-2.5 px-3 text-right">Grade</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredList.map((st, idx) => {
-                  const hasScore = st.finalScore !== null && st.finalScore !== undefined;
-                  const grade = hasScore ? getGradeLetter(st.finalScore) : { letter: st.grade || '—', color: 'text-slate-500 bg-slate-50 border-slate-200' };
 
-                  return (
-                    <tr key={st.studentID || idx} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-3 font-mono font-medium text-brand-primary">
-                        {st.studentID}
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-slate-800">
-                        {st.name}
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">
-                        {st.classGroup}
-                      </td>
-                      <td className="py-3 px-3 text-center font-bold text-slate-800">
-                        {hasScore ? `${st.finalScore}%` : '0%'}
-                      </td>
-                      <td className="py-3 px-3 text-center font-semibold text-brand-secondary">
-                        {st.rank ? `#${st.rank}` : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${grade.color}`}>
-                          {grade.letter}
-                        </span>
-                      </td>
+            <div className="overflow-x-auto">
+              {filteredList.length === 0 ? (
+                <div className="py-12 text-center text-xs text-brand-neutral-muted">
+                  No data available.
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                      <th className="py-2.5 px-3">Student ID</th>
+                      <th className="py-2.5 px-3">Name</th>
+                      <th className="py-2.5 px-3">Class Group</th>
+                      <th className="py-2.5 px-3 text-center">Final Score</th>
+                      <th className="py-2.5 px-3 text-center">Rank</th>
+                      <th className="py-2.5 px-3 text-right">Grade</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredList.map((st, idx) => {
+                      const hasScore = st.finalScore !== null && st.finalScore !== undefined;
+                      const grade = hasScore ? getGradeLetter(st.finalScore) : { letter: st.grade || '—', color: 'text-slate-500 bg-slate-50 border-slate-200' };
+
+                      return (
+                        <tr key={st.studentID || idx} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-3 font-mono font-medium text-brand-primary">
+                            {st.studentID}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-slate-800">
+                            {st.name}
+                          </td>
+                          <td className="py-3 px-3 text-slate-600">
+                            {st.classGroup}
+                          </td>
+                          <td className="py-3 px-3 text-center font-bold text-slate-800">
+                            {hasScore ? `${st.finalScore}%` : '0%'}
+                          </td>
+                          <td className="py-3 px-3 text-center font-semibold text-brand-secondary">
+                            {st.rank ? `#${st.rank}` : '—'}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${grade.color}`}>
+                              {grade.letter}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Instructor Actions Matrix */}
       <div className="portal-card">

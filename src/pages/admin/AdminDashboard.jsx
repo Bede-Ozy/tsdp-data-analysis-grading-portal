@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllStudents, getAllCoaches, getAllStudentsPerformance } from '../../services/api';
+import { getAdminDashboard } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { CardSkeleton } from '../../components/SkeletonLoader';
 import {
   Users,
   Award,
@@ -25,20 +25,19 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
-        const [stdsRes, coaRes, perfRes] = await Promise.all([
-          getAllStudents().catch(() => ({ success: false, data: [] })),
-          getAllCoaches().catch(() => ({ success: false, data: [] })),
-          getAllStudentsPerformance().catch(() => ({ success: false, data: [] }))
-        ]);
+        const res = await getAdminDashboard();
+        if (res && res.success !== false) {
+          const payload = res.data || res;
+          const stdsList = payload.students || [];
+          const coaList = payload.coaches || [];
+          const perfList = payload.performance || payload.studentsPerformance || [];
 
-        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || stdsRes?.students || []);
-        const coaList = Array.isArray(coaRes) ? coaRes : (coaRes?.data || coaRes?.coaches || coaRes?.result || []);
-        const perfList = Array.isArray(perfRes) ? perfRes : (perfRes?.data || perfRes?.result || []);
-
-        setStudents(stdsList);
-        setCoaches(coaList);
-        setStudentsPerformance(perfList);
+          setStudents(Array.isArray(stdsList) ? stdsList : []);
+          setCoaches(Array.isArray(coaList) ? coaList : []);
+          setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
+        }
       } catch (err) {
         console.error('Failed to load data for admin dashboard:', err);
       } finally {
@@ -47,10 +46,6 @@ export default function AdminDashboard() {
     }
     loadData();
   }, []);
-
-  if (loading) {
-    return <LoadingSpinner size="lg" text="Loading administrative overview from live database..." />;
-  }
 
   // 1. Total Students
   const totalStudents = students.length;
@@ -112,74 +107,84 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Overview Cards — 5 Metrics requested */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Total Students */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
-            <Users className="w-4 h-4 text-brand-primary" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">{totalStudents}</span>
-            <span className="badge-primary text-[10px]">Roster</span>
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Enrolled residents</p>
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Total Students */}
+          <div className="portal-card">
+            <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+              <span className="text-xs font-medium text-slate-500 tracking-wide">Total Students</span>
+              <Users className="w-4 h-4 text-brand-primary" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">{totalStudents}</span>
+              <span className="badge-primary text-[10px]">Roster</span>
+            </div>
+            <p className="text-[11px] text-brand-neutral-muted mt-2">Enrolled residents</p>
+          </div>
 
-        {/* Total Coaches */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Total Coaches</span>
-            <UserCheck className="w-4 h-4 text-brand-secondary" />
+          {/* Total Coaches */}
+          <div className="portal-card">
+            <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+              <span className="text-xs font-medium text-slate-500 tracking-wide">Total Coaches</span>
+              <UserCheck className="w-4 h-4 text-brand-secondary" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-semibold text-brand-secondary">{totalCoaches}</span>
+              <span className="badge-secondary text-[10px]">Faculty</span>
+            </div>
+            <p className="text-[11px] text-brand-neutral-muted mt-2">From COACHES_MASTER</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-secondary">{totalCoaches}</span>
-            <span className="badge-secondary text-[10px]">Faculty</span>
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">From COACHES_MASTER</p>
-        </div>
 
-        {/* Active Students */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Active Students</span>
-            <Users className="w-4 h-4 text-emerald-600" />
+          {/* Active Students */}
+          <div className="portal-card">
+            <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+              <span className="text-xs font-medium text-slate-500 tracking-wide">Active Students</span>
+              <Users className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeStudents}</span>
+              <span className="badge-success text-[10px]">Active</span>
+            </div>
+            <p className="text-[11px] text-brand-neutral-muted mt-2">Status compliance</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeStudents}</span>
-            <span className="badge-success text-[10px]">Active</span>
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Status compliance</p>
-        </div>
 
-        {/* Active Coaches */}
-        <div className="portal-card">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Active Coaches</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          {/* Active Coaches */}
+          <div className="portal-card">
+            <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+              <span className="text-xs font-medium text-slate-500 tracking-wide">Active Coaches</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeCoaches}</span>
+              <span className="badge-success text-[10px]">Active</span>
+            </div>
+            <p className="text-[11px] text-brand-neutral-muted mt-2">Operational staff</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-emerald-600">{activeCoaches}</span>
-            <span className="badge-success text-[10px]">Active</span>
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Operational staff</p>
-        </div>
 
-        {/* Class Average Score */}
-        <div className="portal-card col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-            <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
-            <TrendingUp className="w-4 h-4 text-brand-primary" />
+          {/* Class Average Score */}
+          <div className="portal-card col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+              <span className="text-xs font-medium text-slate-500 tracking-wide">Class Avg Score</span>
+              <TrendingUp className="w-4 h-4 text-brand-primary" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-semibold text-brand-primary">
+                {classAvgScore !== null ? `${classAvgScore}%` : '—'}
+              </span>
+              {classAvgScore !== null && <span className="badge-primary text-[10px]">Cohort Mean</span>}
+            </div>
+            <p className="text-[11px] text-brand-neutral-muted mt-2">Across final scores</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-semibold text-brand-primary">
-              {classAvgScore !== null ? `${classAvgScore}%` : '0%'}
-            </span>
-            {classAvgScore !== null && <span className="badge-primary text-[10px]">Cohort Mean</span>}
-          </div>
-          <p className="text-[11px] text-brand-neutral-muted mt-2">Across final scores</p>
         </div>
-      </div>
+      )}
 
       {/* Management Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

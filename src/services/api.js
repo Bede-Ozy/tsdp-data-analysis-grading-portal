@@ -9,67 +9,128 @@ const API_URL = import.meta.env.PROD
 // Remove hardcoded fallback - key MUST come from .env
 const API_KEY = import.meta.env.VITE_API_KEY;
 
-export async function callApi(functionName, parameters = []) {
-  try {
-    if (!API_KEY) {
-      console.error('VITE_API_KEY is missing from .env file');
-      return { 
-        success: false, 
-        message: 'API key not configured. Check .env file.' 
-      };
-    }
+// In-memory cache for slow-changing reference data
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-    const payload = {
-      apiKey: API_KEY.trim(),
-      function: functionName,
-      parameters: parameters
-    };
+export async function callApiCached(functionName, parameters = [], ttl = CACHE_TTL) {
+  const cacheKey = `${functionName}:${JSON.stringify(parameters)}`;
+  const cached = cache.get(cacheKey);
 
-    const response = await axios.post(API_URL, payload, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    let data = response.data;
-    
-    // Handle if response is string
-    if (typeof data === 'string') {
-      try {
-        data = JSON.parse(data);
-      } catch {
-        console.error('Invalid response from backend:', data);
-        return { success: false, message: 'Invalid response from backend' };
-      }
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`API Error calling '${functionName}':`, error.message);
-    
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-      
-      if (error.response.status === 401) {
-        const rawData = typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data || '');
-        if (rawData.includes('<!DOCTYPE') || rawData.includes('<html') || rawData.includes('ServiceLogin') || rawData.includes('unable to open')) {
-          return { 
-            success: false, 
-            message: 'Google Apps Script Access Denied (401): Web App deployment permissions issue. Ensure "Execute as: Me" and "Who has access: Anyone" in Apps Script Deploy settings.' 
-          };
-        }
-        return { 
-          success: false, 
-          message: 'Unauthorized: API key mismatch. Check SETTINGS sheet and .env file.' 
-        };
-      }
-    }
-    
-    return { success: false, message: error.message };
+  if (cached && Date.now() - cached.timestamp < ttl) {
+    return cached.data;
   }
+
+  const data = await callApi(functionName, parameters);
+
+  if (data && data.success !== false) {
+    cache.set(cacheKey, { data, timestamp: Date.now() });
+  }
+
+  return data;
 }
 
+export async function callApi(functionName, parameters = [], retries = 3) {
+  const apiKey = (API_KEY || '').trim();
+  if (!apiKey) {
+    console.error('VITE_API_KEY is missing from .env file');
+    return { 
+      success: false, 
+      message: 'API key not configured. Check .env file.' 
+    };
+  }
+
+  const payload = {
+    apiKey,
+    function: functionName,
+    parameters: parameters
+  };
+
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await axios.post(API_URL, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      let data = response.data;
+      
+      // Handle if response is string
+      if (typeof data === 'string') {
+        // Detect Google Drive / Apps Script HTML error page returned as 200
+        if (data.includes('<!DOCTYPE') || data.includes('<html') || data.includes('unable to open')) {
+          throw new Error('Google Apps Script temporary HTML error response');
+        }
+        try {
+          data = JSON.parse(data);
+        } catch {
+          console.error('Invalid JSON response from backend:', data);
+          throw new Error('Invalid JSON response from backend');
+        }
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      const status = error.response?.status;
+      const rawData = typeof error.response?.data === 'string' ? error.response.data : '';
+      const isHtmlError = rawData.includes('<!DOCTYPE') || rawData.includes('<html') || rawData.includes('unable to open');
+      
+      const isColdStart = status === 404 || status === 500 || status === 502 || status === 503 || error.code === 'ECONNABORTED' || isHtmlError || error.message.includes('Google Apps Script temporary HTML error');
+
+      if (isColdStart && attempt < retries) {
+        const waitTime = Math.pow(2, attempt - 1) * 1000;
+        console.warn(`[Retry ${attempt}/${retries}] ${functionName} failed (status: ${status || 'Network/Parse'}). Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+
+      console.error(`API Error calling '${functionName}':`, error.message);
+      
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+        
+        if (error.response.status === 401) {
+          const respStr = typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data || '');
+          if (respStr.includes('<!DOCTYPE') || respStr.includes('<html') || respStr.includes('ServiceLogin') || respStr.includes('unable to open')) {
+            return { 
+              success: false, 
+              message: 'Google Apps Script Access Denied (401): Web App deployment permissions issue. Ensure "Execute as: Me" and "Who has access: Anyone" in Apps Script Deploy settings.' 
+            };
+          }
+          return { 
+            success: false, 
+            message: 'Unauthorized: API key mismatch. Check SETTINGS sheet and .env file.' 
+          };
+        }
+      }
+      
+      break;
+    }
+  }
+
+  return { 
+    success: false, 
+    message: lastError?.response?.status === 404 
+      ? 'Backend temporarily unavailable (cold start). Please try again.' 
+      : lastError?.message || 'Request failed'
+  };
+}
+
+// Combined Dashboard Endpoints (Fast 1-Trip Loaders)
+export const getStudentDashboard = (studentID) => 
+  callApi('getStudentDashboard', [studentID]);
+
+export const getCoachDashboard = () => 
+  callApi('getCoachDashboard', []);
+
+export const getAdminDashboard = () => 
+  callApi('getAdminDashboard', []);
 
 // Authentication
 export const studentLogin = (studentNumber, email) => 
@@ -83,7 +144,7 @@ export const getStudentPerformance = (studentID) =>
   callApi('getStudentPerformance', [studentID]);
 
 export const getAllStudentsPerformance = async () => {
-  const res = await callApi('getAllStudentsPerformance', []);
+  const res = await callApiCached('getAllStudentsPerformance', []);
   if (Array.isArray(res)) {
     return { success: true, data: res };
   }
@@ -91,7 +152,7 @@ export const getAllStudentsPerformance = async () => {
 };
 
 export const getAllStudents = async () => {
-  const res = await callApi('getAllStudents', []);
+  const res = await callApiCached('getAllStudents', []);
   const list = Array.isArray(res) ? res : (res?.data || res?.students || []);
   return {
     success: true,
@@ -158,7 +219,7 @@ export const getPendingSocialPosts = () =>
   callApi('getPendingSocialPosts', []);
 
 export const getAllCoaches = () => 
-  callApi('getAllCoaches', []);
+  callApiCached('getAllCoaches', []);
 
 export const updateCoachStatus = (coachID, newStatus) => 
   callApi('updateCoachStatus', [coachID, newStatus]);

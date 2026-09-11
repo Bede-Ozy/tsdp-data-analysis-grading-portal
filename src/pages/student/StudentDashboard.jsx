@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentPerformance, getStudentAttendance, getStudentClassActivities } from '../../services/api';
+import { getStudentDashboard } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { CardSkeleton, KPIGridSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
 import {
   Calendar,
   Clock,
@@ -44,40 +44,29 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     async function loadData() {
+      const studentID = user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${String(user.studentNumber).padStart(3, '0')}` : '');
+      if (!studentID) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
-        const studentID = user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${String(user.studentNumber).padStart(3, '0')}` : '');
-        if (!studentID) {
-          setLoading(false);
-          return;
-        }
-
-        const [perfRes, attRes, actRes] = await Promise.all([
-          getStudentPerformance(studentID).catch(err => ({ success: false, error: err.message })),
-          getStudentAttendance(studentID).catch(err => ({ success: false, error: err.message })),
-          getStudentClassActivities(studentID).catch(err => ({ success: false, error: err.message }))
-        ]);
-
-        // 1. Performance Data
-        if (perfRes) {
-          const pData = perfRes.data || (perfRes.success ? perfRes : (perfRes.finalScore !== undefined || perfRes.overallScore !== undefined ? perfRes : null));
+        const res = await getStudentDashboard(studentID);
+        if (res && res.success !== false) {
+          const payload = res.data || res;
+          
+          // 1. Performance Data
+          const pData = payload.performance || (payload.finalScore !== undefined || payload.overallScore !== undefined ? payload : null);
           setPerformance(pData);
-        }
 
-        // 2. Attendance Data
-        if (attRes) {
-          const aData = attRes.data || (attRes.success ? attRes : (attRes.records || attRes.attendanceRate !== undefined ? attRes : null));
+          // 2. Attendance Data
+          const aData = payload.attendance || (payload.records || payload.attendanceRate !== undefined ? payload : null);
           setAttendanceData(aData);
-        }
 
-        // 3. Class Activities
-        if (actRes) {
-          const list = Array.isArray(actRes)
-            ? actRes
-            : (Array.isArray(actRes.data)
-              ? actRes.data
-              : (Array.isArray(actRes.records)
-                ? actRes.records
-                : (Array.isArray(actRes.activities) ? actRes.activities : [])));
+          // 3. Class Activities
+          const act = payload.activities || payload.classActivities || [];
+          const list = Array.isArray(act) ? act : (act.records || act.data || []);
           setClassActivities(list);
         }
       } catch (err) {
@@ -88,10 +77,6 @@ export default function StudentDashboard() {
     }
     loadData();
   }, [user]);
-
-  if (loading) {
-    return <LoadingSpinner size="lg" text="Loading live performance records from backend..." />;
-  }
 
   // Hero Card Metrics
   const overallScore = performance?.finalScore !== undefined && performance?.finalScore !== null
@@ -119,46 +104,45 @@ export default function StudentDashboard() {
       ? attendanceData
       : (Array.isArray(performance?.attendanceHistory) ? performance.attendanceHistory : []));
 
+  const TOTAL_PROGRAM_DAYS = 80;
+
   const presentCount = attendanceData?.presentCount !== undefined && attendanceData?.presentCount !== null
-    ? attendanceData.presentCount
+    ? Number(attendanceData.presentCount)
     : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'present').length;
 
   const lateCount = attendanceData?.lateCount !== undefined && attendanceData?.lateCount !== null
-    ? attendanceData.lateCount
+    ? Number(attendanceData.lateCount)
     : attendanceRecords.filter(r => String(r.status || '').toLowerCase() === 'late').length;
 
-  const totalDays = attendanceData?.totalDays !== undefined && attendanceData?.totalDays !== null
-    ? attendanceData.totalDays
-    : attendanceRecords.length;
+  // Present Rate = (Present ÷ 80) × 100 (Only Present Rate counts toward grade)
+  const presentRate = Number(((presentCount / TOTAL_PROGRAM_DAYS) * 100).toFixed(1));
 
-  // 9-Component Score Breakdown for ScoreTable
-  const scoreBreakdown = {
-    technicalAssignments: {
-      score: performance?.technicalAssignmentsScore ?? performance?.breakdown?.technicalAssignments?.score ?? null
-    },
-    professionalAssignments: {
-      score: performance?.professionalAssignmentsScore ?? performance?.breakdown?.professionalAssignments?.score ?? null
-    },
-    classActivities: {
-      score: performance?.classActivitiesScore ?? performance?.breakdown?.classActivities?.score ?? null
-    },
-    socialMedia: {
-      score: performance?.socialMediaScore ?? performance?.breakdown?.socialMedia?.score ?? null
-    },
-    moduleProjects: {
-      score: performance?.moduleProjectsScore ?? performance?.breakdown?.moduleProjects?.score ?? null
-    },
-    capstoneProjects: {
-      score: performance?.capstoneScore ?? performance?.breakdown?.capstoneProjects?.score ?? null
-    },
-    groupPresentations: {
-      score: performance?.groupPresentationsScore ?? performance?.breakdown?.groupPresentations?.score ?? null
-    },
-    attendance: {
-      score: performance?.attendanceScore ?? performance?.breakdown?.attendance?.score ?? attendanceRate
-    },
-    softSkills: {
-      score: performance?.softSkillsScore ?? performance?.breakdown?.softSkills?.score ?? null
+  // Late Rate = (Late ÷ 80) × 100 (Display/Information only)
+  const lateRate = Number(((lateCount / TOTAL_PROGRAM_DAYS) * 100).toFixed(1));
+
+  // Main Attendance Rate display based on (Present ÷ 80) × 100
+  const attendanceRateDisplay = `${presentRate.toFixed(1)}%`;
+
+  // Date formatting helpers
+  const formatAttendanceDate = (val) => {
+    if (!val) return '—';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return String(val);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return String(val);
+    }
+  };
+
+  const formatAttendanceTime = (val) => {
+    if (!val) return '';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } catch {
+      return '';
     }
   };
 
@@ -230,8 +214,15 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {loading ? (
+        <div className="space-y-6">
+          <KPIGridSkeleton count={4} />
+          <TableSkeleton rows={9} />
+        </div>
+      ) : (
+        <>
+          {/* Summary KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Overall Score */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
@@ -276,12 +267,23 @@ export default function StudentDashboard() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {attendanceRate !== null ? `${attendanceRate}%` : '0%'}
+              {attendanceRateDisplay}
             </span>
-            {attendanceRate !== null && <span className="badge-success text-[10px]">Tracked</span>}
+            <span className="badge-success text-[10px]">Tracked</span>
           </div>
+
+          {/* Two small labels under the Attendance KPI: Present: X% and Late: Y% */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+              Present: {presentRate.toFixed(1)}%
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+              Late: {lateRate.toFixed(1)}%
+            </span>
+          </div>
+
           <p className="text-[11px] text-brand-neutral-muted mt-2">
-            {totalDays > 0 ? `${presentCount} of ${totalDays} sessions attended` : 'No attendance recorded yet'}
+            {presentCount} on-time of {TOTAL_PROGRAM_DAYS} days (Late: {lateCount}) · 80-day program
           </p>
         </div>
 
@@ -369,7 +371,7 @@ export default function StudentDashboard() {
 
       {/* 9 Component Score Breakdown Table */}
       <div className="space-y-2">
-        <ScoreTable breakdown={scoreBreakdown} totalScore={overallScore} />
+        <ScoreTable performance={performance} totalScore={overallScore} />
       </div>
 
       {/* Two Detailed Live Sections: Attendance History & Class Activities */}
@@ -390,19 +392,38 @@ export default function StudentDashboard() {
             </Link>
           </div>
 
-          {/* Attendance Stats Bar */}
-          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-center">
-            <div>
-              <span className="text-[11px] text-slate-500 font-medium block">Present</span>
-              <span className="text-base font-bold text-emerald-600">{presentCount}</span>
+          {/* Attendance Stats Bar: 4-Card Breakdown */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center shadow-xs">
+              <span className="text-[10px] text-emerald-700 font-medium block uppercase tracking-wide">Present Rate</span>
+              <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                <span className="text-base font-bold text-emerald-600">{presentRate.toFixed(1)}%</span>
+                <span className="text-[10px] text-slate-400 font-medium">({presentCount}/80)</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[11px] text-slate-500 font-medium block">Late</span>
-              <span className="text-base font-bold text-amber-600">{lateCount}</span>
+
+            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center shadow-xs">
+              <span className="text-[10px] text-amber-700 font-medium block uppercase tracking-wide">Late Rate</span>
+              <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                <span className="text-base font-bold text-amber-600">{lateRate.toFixed(1)}%</span>
+                <span className="text-[10px] text-amber-600/80 font-medium">({lateCount}/80)</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[11px] text-slate-500 font-medium block">Total Days</span>
-              <span className="text-base font-bold text-slate-800">{totalDays}</span>
+
+            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center shadow-xs">
+              <span className="text-[10px] text-slate-500 font-medium block uppercase tracking-wide">Recorded Sessions</span>
+              <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                <span className="text-base font-bold text-brand-primary">{presentCount + lateCount}</span>
+                <span className="text-[10px] text-slate-400 font-medium">Tracked</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center shadow-xs">
+              <span className="text-[10px] text-slate-500 font-medium block uppercase tracking-wide">Total Program</span>
+              <div className="flex items-baseline justify-center gap-1 mt-0.5">
+                <span className="text-base font-bold text-slate-700">80</span>
+                <span className="text-[10px] text-slate-400 font-medium">Days</span>
+              </div>
             </div>
           </div>
 
@@ -416,7 +437,7 @@ export default function StudentDashboard() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
-                    <th className="py-2 px-2">Date</th>
+                    <th className="py-2 px-2">Date & Time</th>
                     <th className="py-2 px-2 text-center">Week</th>
                     <th className="py-2 px-2 text-center">Day</th>
                     <th className="py-2 px-2">Session</th>
@@ -427,15 +448,19 @@ export default function StudentDashboard() {
                   {attendanceRecords.map((att, idx) => {
                     const isPresent = String(att.status || '').toLowerCase() === 'present';
                     const isLate = String(att.status || '').toLowerCase() === 'late';
+                    const dateFormatted = formatAttendanceDate(att.date || att.timestamp);
+                    const timeFormatted = formatAttendanceTime(att.date || att.timestamp);
+
                     return (
                       <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-2.5 px-2 font-medium text-slate-800">
-                          {att.date || att.timestamp || '—'}
+                        <td className="py-2 px-2 font-medium text-slate-800">
+                          <div>{dateFormatted}</div>
+                          {timeFormatted && <div className="text-[10px] text-slate-400 font-normal">{timeFormatted}</div>}
                         </td>
-                        <td className="py-2.5 px-2 text-center text-slate-600">
+                        <td className="py-2 px-2 text-center text-slate-600">
                           {att.weekNumber ?? att.week ?? '—'}
                         </td>
-                        <td className="py-2.5 px-2 text-center text-slate-600">
+                        <td className="py-2 px-2 text-center text-slate-600">
                           {att.dayNumber ?? att.day ?? '—'}
                         </td>
                         <td className="py-2.5 px-2 text-slate-600 font-medium">
@@ -522,6 +547,8 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
