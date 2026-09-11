@@ -44,7 +44,9 @@ import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
 
 
 function AppLayout({ children }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -53,7 +55,7 @@ function AppLayout({ children }) {
   const showSidebar = isAuthenticated && !isLoginPage;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col relative">
       {/* Subtle, faint & fading background pattern for login pages */}
       {isLoginPage && (
         <div
@@ -74,20 +76,20 @@ function AppLayout({ children }) {
           isSidebarOpen={isSidebarOpen}
         />
 
-      <div className="flex-1 flex">
-        {showSidebar && (
-          <Sidebar
-            isOpen={isSidebarOpen}
-            onClose={() => setIsSidebarOpen(false)}
-          />
-        )}
+        <div className="flex-1 flex pt-16">
+          {showSidebar && (
+            <Sidebar
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          )}
 
-        <main className={`flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-200 ${
-          showSidebar ? 'lg:pl-72' : 'max-w-7xl mx-auto w-full'
-        }`}>
-          {children || <Outlet />}
-        </main>
-      </div>
+          <main className={`flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-300 ${
+            showSidebar && isSidebarOpen ? 'lg:pl-64' : 'max-w-7xl mx-auto w-full'
+          }`}>
+            {children || <Outlet />}
+          </main>
+        </div>
 
       {/* Footer */}
       <footer className={`border-t border-brand-neutral-border py-4 text-center text-xs text-brand-neutral-muted ${

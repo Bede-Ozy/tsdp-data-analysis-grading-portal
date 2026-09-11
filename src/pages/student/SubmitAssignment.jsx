@@ -3,10 +3,12 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   getStudentPendingAssignments,
+  getActiveAssignments,
   handleTechnicalFileUpload,
-  handleProfessionalFileUpload
+  handleProfessionalFileUpload,
+  handleModuleProjectUpload
 } from '../../services/api';
-import FileUploader, { fileToBase64 } from '../../components/FileUploader';
+import FileUploader, { fileToBase64, filesToBase64Array } from '../../components/FileUploader';
 import { TOOLS_LIST } from '../../utils/constants';
 import {
   Upload,
@@ -20,7 +22,10 @@ import {
   Info,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  FolderArchive,
+  X,
+  Sparkles
 } from 'lucide-react';
 
 export default function SubmitAssignment() {
@@ -34,8 +39,10 @@ export default function SubmitAssignment() {
 
   // Form State
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [successResult, setSuccessResult] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
 
   // Manual fallback state if student needs to submit custom work
@@ -49,7 +56,7 @@ export default function SubmitAssignment() {
   const studentNum = user?.studentNumber || user?.studentID || '';
   const studentID = user?.studentID || (user?.studentNumber ? `TSDP2026-RES-${String(user.studentNumber).padStart(3, '0')}` : '');
 
-  // Fetch pending assignments
+  // Fetch pending assignments and active syllabus assignments
   useEffect(() => {
     async function loadPending() {
       if (!studentID && !studentNum) {
@@ -58,17 +65,33 @@ export default function SubmitAssignment() {
       }
       setLoadingPending(true);
       try {
-        const res = await getStudentPendingAssignments(studentID || studentNum);
-        if (res && res.success !== false) {
-          const list = Array.isArray(res) ? res : (res.data || res.assignments || []);
-          setPendingAssignments(list);
+        const [res, activeRes] = await Promise.all([
+          getStudentPendingAssignments(studentID || studentNum).catch(() => []),
+          getActiveAssignments().catch(() => [])
+        ]);
 
-          // If preselected ID from query params exists and is found
-          if (preselectedID && list.some(a => (a.assignmentID || a.id) === preselectedID)) {
-            setSelectedAssignmentID(preselectedID);
-          } else if (list.length > 0 && !selectedAssignmentID) {
-            setSelectedAssignmentID(list[0].assignmentID || list[0].id);
-          }
+        let list = [];
+        if (res && res.success !== false) {
+          list = Array.isArray(res) ? [...res] : (res.data || res.assignments || []);
+        }
+
+        // Merge any active deliverable from the Assignment sheet tab (both regular and ModuleProject)
+        if (Array.isArray(activeRes) && activeRes.length > 0) {
+          activeRes.forEach(act => {
+            const actID = act.assignmentID || act.id;
+            if (actID && !list.some(a => (a.assignmentID || a.id) === actID)) {
+              list.unshift(act);
+            }
+          });
+        }
+
+        setPendingAssignments(list);
+
+        // If preselected ID from query params exists and is found
+        if (preselectedID && list.some(a => (a.assignmentID || a.id) === preselectedID)) {
+          setSelectedAssignmentID(preselectedID);
+        } else if (list.length > 0 && !selectedAssignmentID) {
+          setSelectedAssignmentID(list[0].assignmentID || list[0].id);
         }
       } catch (err) {
         console.error('Error loading pending assignments:', err);
@@ -125,8 +148,10 @@ export default function SubmitAssignment() {
   const isDeadlineLocked = !isManualMode && deadlineInfo?.isPast;
 
   // Allowed file types string for FileUploader
+  const isModuleProject = activeAssignment?.type === 'ModuleProject';
   const allowedExtensions = activeAssignment?.allowedFileTypes || '.xlsx, .pdf, .sql, .pbix, .py, .ipynb, .docx, .zip';
-  const maxFiles = activeAssignment?.maxFilesAllowed || 1;
+  const maxFiles = Number(activeAssignment?.maxFilesAllowed) || (isModuleProject ? 5 : 1);
+  const isMultiple = maxFiles > 1 || isModuleProject;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,8 +163,9 @@ export default function SubmitAssignment() {
       return;
     }
 
-    if (!selectedFile) {
-      setError('Please select or drop your solution file to upload.');
+    const hasFiles = selectedFiles.length > 0 || Boolean(selectedFile);
+    if (!hasFiles) {
+      setError('Please select or drop your solution file(s) to upload.');
       return;
     }
 
@@ -150,8 +176,6 @@ export default function SubmitAssignment() {
 
     setLoading(true);
     try {
-      const fileBase64 = await fileToBase64(selectedFile);
-
       let asgnID = '';
       let asgnType = '';
       let asgnTool = '';
@@ -180,7 +204,22 @@ export default function SubmitAssignment() {
       }
 
       let res;
-      if (asgnType.toLowerCase() === 'technical') {
+      if (isModuleProject) {
+        const filesToUpload = selectedFiles.length > 0 ? selectedFiles : [selectedFile];
+        const filesArray = await filesToBase64Array(filesToUpload);
+        const monthNum = Number(activeAssignment?.monthNumber || 1);
+        const toolName = activeAssignment?.tool || 'Excel';
+
+        res = await handleModuleProjectUpload(
+          studentNum,
+          monthNum,
+          toolName,
+          asgnTitle,
+          filesArray
+        );
+      } else if (asgnType.toLowerCase() === 'technical') {
+        const primaryFile = selectedFile || selectedFiles[0];
+        const fileBase64 = await fileToBase64(primaryFile);
         res = await handleTechnicalFileUpload(
           studentNum,
           asgnID,
@@ -189,9 +228,11 @@ export default function SubmitAssignment() {
           asgnTool,
           asgnTitle,
           fileBase64,
-          selectedFile.name
+          primaryFile.name
         );
       } else {
+        const primaryFile = selectedFile || selectedFiles[0];
+        const fileBase64 = await fileToBase64(primaryFile);
         res = await handleProfessionalFileUpload(
           studentNum,
           asgnID,
@@ -200,20 +241,25 @@ export default function SubmitAssignment() {
           asgnTool,
           asgnTitle,
           fileBase64,
-          selectedFile.name
+          primaryFile.name
         );
       }
 
       if (res && res.success !== false) {
         setSuccessResult(res);
+        setShowSuccessModal(true);
         setSelectedFile(null);
+        setSelectedFiles([]);
         if (isManualMode) setManualTitle('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError(res?.message || 'Failed to submit assignment. Please verify file size and connection.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error(err);
       setError('Error uploading file to Drive. Please check file size and connection.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -303,16 +349,21 @@ export default function SubmitAssignment() {
               ) : (
                 <select
                   value={selectedAssignmentID}
-                  onChange={(e) => setSelectedAssignmentID(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedAssignmentID(e.target.value);
+                    setSelectedFile(null);
+                    setSelectedFiles([]);
+                  }}
                   className="form-input text-xs font-medium"
                 >
                   {pendingAssignments.map((a) => {
                     const id = a.assignmentID || a.id;
-                    const cat = a.category || 'Technical';
+                    const isMod = a.type === 'ModuleProject';
+                    const cat = isMod ? `Module Project (Month ${a.monthNumber || 1})` : (a.category || 'Technical');
                     const tool = a.tool ? `[${a.tool}]` : '';
                     return (
                       <option key={id} value={id}>
-                        {cat} {tool} {a.title || a.assignmentTitle} {a.dueDate ? `— Due: ${new Date(a.dueDate).toLocaleDateString()}` : ''}
+                        {isMod ? '📁 ' : '📝 '} {cat} {tool} {a.title || a.assignmentTitle} {a.dueDate ? `— Due: ${new Date(a.dueDate).toLocaleDateString()}` : ''}
                       </option>
                     );
                   })}
@@ -326,11 +377,13 @@ export default function SubmitAssignment() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                      activeAssignment.category === 'Technical'
+                      activeAssignment.type === 'ModuleProject'
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : activeAssignment.category === 'Technical'
                         ? 'bg-blue-50 text-brand-primary border-blue-200'
-                        : 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     }`}>
-                      {activeAssignment.category || 'Technical'}
+                      {activeAssignment.type === 'ModuleProject' ? `Module Project (Month ${activeAssignment.monthNumber || 1})` : (activeAssignment.category || 'Technical')}
                     </span>
                     {activeAssignment.tool && (
                       <span className="px-2 py-0.5 rounded bg-white text-slate-700 font-medium text-[10px] border border-slate-200">
@@ -510,14 +563,21 @@ export default function SubmitAssignment() {
         {/* File Upload Zone */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="form-label">Upload Your Solution File *</label>
+            <label className="form-label">
+              Upload Your Solution File{isMultiple ? ` (Up to ${maxFiles} files)` : ''} *
+            </label>
             <div className={isDeadlineLocked ? 'opacity-40 pointer-events-none select-none' : ''}>
               <FileUploader
-                onFilesSelected={(files) => setSelectedFile(files[0] || null)}
-                multiple={false}
+                onFilesSelected={(files) => {
+                  setSelectedFiles(files);
+                  setSelectedFile(files[0] || null);
+                }}
+                multiple={isMultiple}
                 maxFiles={maxFiles}
                 acceptedFormats={allowedExtensions}
-                helperText="Upload your completed solution (.xlsx, .sql, .pbix, .py, .pdf, etc.)"
+                helperText={isModuleProject 
+                  ? `Upload up to ${maxFiles} project files (dataset, SQL/Python scripts, Power BI dashboard, slide deck)` 
+                  : "Upload your completed solution (.xlsx, .sql, .pbix, .py, .pdf, etc.)"}
               />
             </div>
           </div>
@@ -526,7 +586,7 @@ export default function SubmitAssignment() {
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="submit"
-              disabled={loading || isDeadlineLocked || !selectedFile}
+              disabled={loading || isDeadlineLocked || (!selectedFile && selectedFiles.length === 0)}
               className="btn-primary px-7 py-2.5 text-sm font-semibold flex items-center gap-2 shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -536,14 +596,73 @@ export default function SubmitAssignment() {
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4" />
-                  <span>Submit Assignment</span>
+                  {isModuleProject ? <FolderArchive className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                  <span>{isModuleProject ? 'Submit Module Project Bundle' : 'Submit Assignment'}</span>
                 </>
               )}
             </button>
           </div>
         </form>
       </div>
+
+      {/* Celebration Success Pop-up Modal */}
+      {showSuccessModal && successResult && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-emerald-100 text-center space-y-5 animate-scale-up relative">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Glowing Icon Circle */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600" />
+            </div>
+
+            {/* Title & Description */}
+            <div className="space-y-2">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                Submission Successful!
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {successResult.message || 'Your assignment solution has been securely uploaded to Google Drive and logged for instructor grading.'}
+              </p>
+            </div>
+
+            {/* Submission Reference Pill */}
+            {successResult.submissionID && (
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-0.5">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Submission Reference</span>
+                <p className="font-mono text-xs font-semibold text-brand-primary">
+                  {successResult.submissionID}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+              <Link
+                to="/student/dashboard"
+                className="w-full sm:w-auto btn-primary py-2.5 px-5 text-xs font-bold flex items-center justify-center gap-2 shadow-sm"
+              >
+                <span>Return to Dashboard</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full sm:w-auto btn-secondary py-2.5 px-5 text-xs font-semibold"
+              >
+                Submit Another File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

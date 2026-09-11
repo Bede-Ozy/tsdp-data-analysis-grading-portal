@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { submitSocialMediaPost } from '../../services/api';
 import { SOCIAL_PLATFORMS } from '../../utils/constants';
-import { Share2, CheckCircle2, AlertCircle, ExternalLink, Info } from 'lucide-react';
+import { Share2, CheckCircle2, AlertCircle, ExternalLink, Info, X, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function SubmitSocialMedia() {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function SubmitSocialMedia() {
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -21,11 +23,13 @@ export default function SubmitSocialMedia() {
     const cleanUrl = postUrl.trim();
     if (!cleanUrl || (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://'))) {
       setError('Please enter a valid URL beginning with https://');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!topic.trim()) {
       setError('Please enter a short summary of the learning topic shared in your post.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -35,14 +39,18 @@ export default function SubmitSocialMedia() {
       const res = await submitSocialMediaPost(studentNum, platform, cleanUrl, topic);
       if (res && res.success) {
         setResult(res);
+        setShowSuccessModal(true);
         setPostUrl('');
         setTopic('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError(res?.message || 'Failed to submit social media post. Please try again.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error(err);
       setError('Failed to submit social media post. Please check network connection.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -50,20 +58,29 @@ export default function SubmitSocialMedia() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-neutral">Submit Social Media Learning Post</h1>
-        <p className="text-sm text-brand-neutral-muted mt-1">
-          Share your daily or weekly learnings with the community. Social media contributions carry a <strong>5%</strong> weight in your final grade.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-neutral">Submit Social Media Learning Post</h1>
+          <p className="text-sm text-brand-neutral-muted mt-1">
+            Share your daily or weekly learnings with the community. Social media contributions carry a <strong>5%</strong> weight in your final grade.
+          </p>
+        </div>
+        <Link
+          to="/student/dashboard"
+          className="btn-secondary text-xs self-start sm:self-auto flex items-center gap-1.5"
+        >
+          <span>Return to Dashboard</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {result && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-brand-success space-y-1">
-          <div className="flex items-center gap-2 font-bold text-base">
-            <CheckCircle2 className="w-5 h-5 text-brand-primary" />
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 space-y-1">
+          <div className="flex items-center gap-2 font-bold text-base text-emerald-800">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             <span>Post Submitted for Review!</span>
           </div>
-          <p className="text-xs">{result.message}</p>
+          <p className="text-xs text-emerald-700">{result.message}</p>
         </div>
       )}
 
@@ -134,7 +151,7 @@ export default function SubmitSocialMedia() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-3 font-bold text-sm shadow-md"
+            className="w-full btn-primary py-3 font-bold text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Submitting Post...' : 'Submit Post for Approval'}
           </button>
@@ -153,6 +170,51 @@ export default function SubmitSocialMedia() {
           <li><strong>Scoring:</strong> Approved posts receive up to 5 points each from your instructor.</li>
         </ul>
       </div>
+
+      {/* Celebration Success Pop-up Modal */}
+      {showSuccessModal && result && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-emerald-100 text-center space-y-5 animate-scale-up relative">
+            <button
+              type="button"
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                Post Submitted for Review!
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Your post on <strong className="text-brand-primary">{platform}</strong> has been received and queued for your coach's evaluation and grading.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+              <Link
+                to="/student/dashboard"
+                className="w-full sm:w-auto btn-primary py-2.5 px-5 text-xs font-bold flex items-center justify-center gap-2 shadow-sm"
+              >
+                <span>Return to Dashboard</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full sm:w-auto btn-secondary py-2.5 px-5 text-xs font-semibold"
+              >
+                Submit Another Post
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -46,6 +46,7 @@ export default function CreateAssignment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [createdAssignmentID, setCreatedAssignmentID] = useState(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState(null);
 
@@ -112,6 +113,8 @@ export default function CreateAssignment() {
       if (res && res.success !== false) {
         const generatedID = res.assignmentID || res.data?.assignmentID || `ASGN-${Date.now()}`;
         setCreatedAssignmentID(generatedID);
+        setShowSuccessToast(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setError(res?.message || 'Failed to create assignment. Please try again.');
       }
@@ -149,12 +152,56 @@ export default function CreateAssignment() {
     setNotes('');
     setMaterialsFiles([]);
     setCreatedAssignmentID(null);
+    setShowSuccessToast(false);
     setNotificationStatus(null);
     setError(null);
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 relative">
+      {/* Floating Success Toast / Pop-up Badge */}
+      {showSuccessToast && (
+        <div className="fixed top-20 right-4 sm:right-8 z-50 animate-bounce-in max-w-sm w-full bg-white border-2 border-emerald-400 rounded-2xl shadow-2xl p-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>Task Created Successfully!</span>
+              <span className="text-xs">🎉</span>
+            </h4>
+            <p className="text-xs text-slate-600">
+              ID: <strong className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">{createdAssignmentID}</strong>
+            </p>
+            <div className="flex items-center gap-3 pt-1 text-xs">
+              <button
+                type="button"
+                onClick={handleNotifyStudents}
+                disabled={notifying || notificationStatus}
+                className="font-bold text-brand-primary hover:underline"
+              >
+                {notifying ? 'Sending...' : 'Email Students'}
+              </button>
+              <span className="text-slate-300">·</span>
+              <button
+                type="button"
+                onClick={() => setShowSuccessToast(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSuccessToast(false)}
+            className="text-slate-400 hover:text-slate-700 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -177,7 +224,7 @@ export default function CreateAssignment() {
 
       {/* Success Notification Banner */}
       {createdAssignmentID && (
-        <div className="portal-card bg-emerald-50/70 border-emerald-200 p-6 space-y-4">
+        <div className="portal-card bg-emerald-50/90 border-2 border-emerald-300 p-6 space-y-4 shadow-sm animate-pulse-subtle">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
               <CheckCircle2 className="w-6 h-6" />

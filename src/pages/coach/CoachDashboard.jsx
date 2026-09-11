@@ -422,15 +422,17 @@ export default function CoachDashboard() {
           {(() => {
             const complianceList = students.map(s => {
               const perf = studentsPerformance.find(p => p.studentID === s.studentID) || {};
-              const techSub = Number(s.technicalAssignmentsSubmitted ?? perf.technicalAssignmentsSubmitted ?? s.techSubmissions ?? (perf.techScore ? 8 : 7));
-              const techTot = Number(s.technicalAssignmentsTotal ?? perf.technicalAssignmentsTotal ?? 10);
-              const techRate = s.techRate ?? perf.techRate ?? (techTot > 0 ? Math.round((techSub / techTot) * 100) : 75);
+              const techSub = Number(s.technicalAssignmentsSubmitted ?? perf.technicalAssignmentsSubmitted ?? s.techSubmissions ?? 0);
+              const techTot = Number(s.technicalAssignmentsTotal ?? perf.technicalAssignmentsTotal ?? 0);
+              const techRate = techTot > 0 ? Math.round((techSub / techTot) * 100) : Number(s.techRate ?? perf.techRate ?? 0);
 
-              const profSub = Number(s.professionalAssignmentsSubmitted ?? perf.professionalAssignmentsSubmitted ?? s.profSubmissions ?? (perf.profScore ? 4 : 3));
-              const profTot = Number(s.professionalAssignmentsTotal ?? perf.professionalAssignmentsTotal ?? 5);
-              const profRate = s.profRate ?? perf.profRate ?? (profTot > 0 ? Math.round((profSub / profTot) * 100) : 60);
+              const profSub = Number(s.professionalAssignmentsSubmitted ?? perf.professionalAssignmentsSubmitted ?? s.profSubmissions ?? 0);
+              const profTot = Number(s.professionalAssignmentsTotal ?? perf.professionalAssignmentsTotal ?? 0);
+              const profRate = profTot > 0 ? Math.round((profSub / profTot) * 100) : Number(s.profRate ?? perf.profRate ?? 0);
 
-              const overallRate = Number(s.complianceRate ?? perf.complianceRate ?? Math.round((techRate * 0.6) + (profRate * 0.4)));
+              const overallRate = (techTot + profTot) > 0
+                ? Math.round(((techSub + profSub) / (techTot + profTot)) * 100)
+                : Number(s.complianceRate ?? perf.complianceRate ?? 0);
               const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || perf.studentName || s.studentID;
 
               return {

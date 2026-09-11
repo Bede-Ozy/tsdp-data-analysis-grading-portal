@@ -50,17 +50,18 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   };
 
   return (
-    <header className="bg-white border-b border-brand-neutral-border sticky top-0 z-30 shadow-xs">
+    <header className="bg-white/95 backdrop-blur-md border-b border-brand-neutral-border fixed top-0 left-0 right-0 z-40 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left: Hamburger (mobile) + Brand / Partner Logos */}
+          {/* Left: Hamburger / Toggle (Desktop & Mobile) + Brand / Partner Logos */}
           <div className="flex items-center gap-3 sm:gap-4">
             {isAuthenticated && (
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="lg:hidden p-2 rounded-lg text-brand-neutral hover:bg-gray-100 focus:outline-none"
-                aria-label="Toggle Navigation"
+                className="p-2 rounded-lg text-brand-neutral hover:bg-gray-100 focus:outline-none transition-colors"
+                title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                aria-label="Toggle Navigation Sidebar"
               >
                 {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>

@@ -240,6 +240,9 @@ export const createAssignment = (type, category, title, description, deliverable
 export const getActiveAssignments = () => 
   callApi('getActiveAssignments', []);
 
+export const getAllAssignments = () => 
+  callApi('getAllAssignments', []);
+
 export const getAssignmentByID = (assignmentID) => 
   callApi('getAssignmentByID', [assignmentID]);
 
@@ -251,6 +254,18 @@ export const notifyStudentsOfAssignment = (assignmentID) =>
 
 export const closeAssignment = (assignmentID) => 
   callApi('closeAssignment', [assignmentID]);
+
+export const updateAssignment = (assignmentID, updates, coachID) => 
+  callApi('updateAssignment', [assignmentID, updates, coachID]);
+
+export const deleteAssignment = (assignmentID, coachID) => 
+  callApi('deleteAssignment', [assignmentID, coachID]);
+
+export const restoreAssignment = (assignmentID) => 
+  callApi('restoreAssignment', [assignmentID]);
+
+export const getAssignmentSubmissionCount = (assignmentID) => 
+  callApi('getAssignmentSubmissionCount', [assignmentID]);
 
 // Compliance
 export const getStudentCompliance = (studentID) => 

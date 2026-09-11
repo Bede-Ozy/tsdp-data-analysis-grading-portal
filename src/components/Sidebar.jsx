@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   UserCheck,
   FileBarChart,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -79,16 +80,24 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-16 bottom-0 left-0 w-64 bg-white border-r border-brand-neutral-border z-30 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-y-auto flex flex-col justify-between ${
+        className={`fixed top-16 bottom-0 left-0 w-64 bg-white border-r border-brand-neutral-border z-30 transform transition-transform duration-300 ease-in-out overflow-y-auto flex flex-col justify-between ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-4 space-y-6">
           {/* Section Header */}
-          <div className="px-3">
+          <div className="px-3 flex items-center justify-between">
             <h2 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
               {roleTitle}
             </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors"
+              title="Collapse sidebar"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Navigation Links */}
@@ -99,7 +108,11 @@ export default function Sidebar({ isOpen, onClose }) {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  onClick={() => onClose && onClose()}
+                  onClick={() => {
+                    if (window.innerWidth < 1024 && onClose) {
+                      onClose();
+                    }
+                  }}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive
