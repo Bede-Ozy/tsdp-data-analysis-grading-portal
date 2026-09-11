@@ -18,7 +18,8 @@ import {
   CheckCircle,
   ShieldCheck,
   UserCheck,
-  FileBarChart
+  FileBarChart,
+  Layers
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -35,7 +36,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const coachLinks = [
     { to: '/coach/dashboard', label: 'Coach Overview', icon: LayoutDashboard },
-    { to: '/coach/attendance-code', label: 'Generate Attendance Code', icon: QrCode },
     { to: '/coach/grade-submissions', label: 'Grade Submissions', icon: CheckSquare },
     { to: '/coach/class-activity', label: 'Record Class Activity', icon: MessageSquare },
     { to: '/coach/grade-module-projects', label: 'Grade Module Projects', icon: Database },
@@ -49,6 +49,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/admin/dashboard', label: 'Cohort Overview', icon: LayoutDashboard },
     { to: '/admin/students', label: 'Manage Residents', icon: Users },
     { to: '/admin/coaches', label: 'Manage Coaches', icon: UserCheck },
+    { to: '/admin/create-capstone-group', label: 'Create Capstone Group', icon: Layers },
     { to: '/admin/reports', label: 'Performance Reports', icon: FileBarChart },
   ];
 

@@ -31,6 +31,8 @@ import GradeCapstoneSprints from './pages/coach/GradeCapstoneSprints';
 import GradeGroupPresentations from './pages/coach/GradeGroupPresentations';
 import SoftSkillsEvaluation from './pages/coach/SoftSkillsEvaluation';
 import ApproveSocialMedia from './pages/coach/ApproveSocialMedia';
+import CreateAssignment from './pages/coach/CreateAssignment';
+import ManageAssignments from './pages/coach/ManageAssignments';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -38,6 +40,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageStudents from './pages/admin/ManageStudents';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
+import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
 
 
 function AppLayout({ children }) {
@@ -265,6 +268,22 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/coach/create-assignment"
+              element={
+                <ProtectedRoute allowedRoles={['coach']}>
+                  <CreateAssignment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/coach/manage-assignments"
+              element={
+                <ProtectedRoute allowedRoles={['coach']}>
+                  <ManageAssignments />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected Admin Portal Routes */}
             <Route
@@ -296,6 +315,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <ViewReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/create-capstone-group"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                  <CreateCapstoneGroup />
                 </ProtectedRoute>
               }
             />

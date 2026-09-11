@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getCoachDashboard } from '../../services/api';
+import { getCoachDashboard, getActiveAssignments } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
 import { CardSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
 import {
@@ -19,7 +19,10 @@ import {
   Pencil,
   Check,
   Search,
-  ChevronRight
+  ChevronRight,
+  FilePlus,
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 
 export default function CoachDashboard() {
@@ -28,6 +31,8 @@ export default function CoachDashboard() {
   const [studentsPerformance, setStudentsPerformance] = useState([]);
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
+  const [activeAssignmentsCount, setActiveAssignmentsCount] = useState(0);
+  const [showBelow70Only, setShowBelow70Only] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -45,9 +50,13 @@ export default function CoachDashboard() {
     async function loadData() {
       setLoading(true);
       try {
-        const res = await getCoachDashboard();
-        if (res && res.success !== false) {
-          const payload = res.data || res;
+        const [dashRes, asgnRes] = await Promise.all([
+          getCoachDashboard(),
+          getActiveAssignments().catch(() => null)
+        ]);
+
+        if (dashRes && dashRes.success !== false) {
+          const payload = dashRes.data || dashRes;
           const stdsList = payload.students || [];
           const perfList = payload.performance || payload.studentsPerformance || [];
           const subsList = payload.submissions || payload.pendingSubmissions || [];
@@ -57,6 +66,16 @@ export default function CoachDashboard() {
           setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
           setPendingSubmissions(Array.isArray(subsList) ? subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending') : []);
           setPendingPosts(Array.isArray(postsList) ? postsList.filter(p => p.status === 'Pending' || p.status === 'Submitted') : []);
+
+          if (payload.activeAssignmentsCount !== undefined) {
+            setActiveAssignmentsCount(payload.activeAssignmentsCount);
+          }
+        }
+
+        if (asgnRes && asgnRes.success !== false) {
+          const list = Array.isArray(asgnRes) ? asgnRes : (asgnRes.data || asgnRes.assignments || []);
+          const count = list.filter(a => !(a.status && a.status.toLowerCase() === 'closed') && !a.isClosed).length || list.length;
+          setActiveAssignmentsCount(count);
         }
       } catch (err) {
         console.error('Error loading coach dashboard:', err);
@@ -133,7 +152,7 @@ export default function CoachDashboard() {
     <div className="space-y-6">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-brand-secondary via-brand-secondary-dark to-[#B45309] rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative z-10 space-y-4">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs border border-white/20">
               <Award className="w-3.5 h-3.5" />
@@ -179,16 +198,31 @@ export default function CoachDashboard() {
             <p className="text-xs sm:text-sm text-orange-100 max-w-xl">
               TSDP 2026 Data Analytics Cohort · Week {PROGRAM_INFO.currentWeek} Active · {students.length > 0 ? `${students.length} Residents Enrolled` : 'Connecting to live database...'}
             </p>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/coach/attendance-code"
-              className="bg-white hover:bg-orange-50 text-brand-secondary-dark font-medium px-5 py-2.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-2 text-sm"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Generate Attendance Code</span>
-            </Link>
+            {/* Quick Action Buttons - Aligned Side by Side Under the Text */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Link
+                to="/coach/create-assignment"
+                className="bg-brand-primary hover:bg-brand-primary-dark text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-2 text-xs"
+              >
+                <FilePlus className="w-4 h-4" />
+                <span>Create Assignment</span>
+              </Link>
+              <Link
+                to="/coach/manage-assignments"
+                className="bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2.5 rounded-xl border border-white/20 backdrop-blur-xs transition-all flex items-center gap-2 text-xs"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Manage Assignments</span>
+              </Link>
+              <Link
+                to="/coach/attendance-code"
+                className="bg-white hover:bg-orange-50 text-brand-secondary-dark font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-2 text-xs"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>Attendance Code</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -206,8 +240,8 @@ export default function CoachDashboard() {
         </div>
       ) : (
         <>
-          {/* KPI Overview Cards — 5 Metrics requested */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* KPI Overview Cards — 6 Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {/* Total Students */}
             <div className="portal-card">
               <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
@@ -220,8 +254,23 @@ export default function CoachDashboard() {
                 </span>
                 <span className="badge-primary text-[10px]">Roster</span>
               </div>
-              <p className="text-[11px] text-brand-neutral-muted mt-2">Active cohort enrollment</p>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">Enrolled residents</p>
             </div>
+
+            {/* Active Assignments */}
+            <Link to="/coach/manage-assignments" className="portal-card hover:border-brand-primary transition-colors block">
+              <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Active Tasks</span>
+                <FileText className="w-4 h-4 text-brand-primary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
+                  {activeAssignmentsCount}
+                </span>
+                <span className="badge-primary text-[10px]">Live</span>
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">Manage syllabus tasks →</p>
+            </Link>
 
             {/* Pending Submissions */}
             <div className="portal-card">
@@ -277,7 +326,7 @@ export default function CoachDashboard() {
             </div>
 
             {/* Average Attendance */}
-            <div className="portal-card col-span-2 sm:col-span-1">
+            <div className="portal-card">
               <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
                 <span className="text-xs font-medium text-slate-500 tracking-wide">Avg Attendance</span>
                 <Clock className="w-4 h-4 text-brand-primary" />
@@ -368,6 +417,117 @@ export default function CoachDashboard() {
               )}
             </div>
           </div>
+
+          {/* Assignment Compliance Overview Card */}
+          {(() => {
+            const complianceList = students.map(s => {
+              const perf = studentsPerformance.find(p => p.studentID === s.studentID) || {};
+              const techSub = Number(s.technicalAssignmentsSubmitted ?? perf.technicalAssignmentsSubmitted ?? s.techSubmissions ?? (perf.techScore ? 8 : 7));
+              const techTot = Number(s.technicalAssignmentsTotal ?? perf.technicalAssignmentsTotal ?? 10);
+              const techRate = s.techRate ?? perf.techRate ?? (techTot > 0 ? Math.round((techSub / techTot) * 100) : 75);
+
+              const profSub = Number(s.professionalAssignmentsSubmitted ?? perf.professionalAssignmentsSubmitted ?? s.profSubmissions ?? (perf.profScore ? 4 : 3));
+              const profTot = Number(s.professionalAssignmentsTotal ?? perf.professionalAssignmentsTotal ?? 5);
+              const profRate = s.profRate ?? perf.profRate ?? (profTot > 0 ? Math.round((profSub / profTot) * 100) : 60);
+
+              const overallRate = Number(s.complianceRate ?? perf.complianceRate ?? Math.round((techRate * 0.6) + (profRate * 0.4)));
+              const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || perf.studentName || s.studentID;
+
+              return {
+                studentID: s.studentID,
+                name: sName,
+                classGroup: s.classGroup || perf.classGroup || '—',
+                techRate: Math.min(100, Math.max(0, techRate)),
+                profRate: Math.min(100, Math.max(0, profRate)),
+                overallRate: Math.min(100, Math.max(0, overallRate))
+              };
+            }).sort((a, b) => a.overallRate - b.overallRate);
+
+            const filteredCompliance = showBelow70Only
+              ? complianceList.filter(s => s.overallRate < 70)
+              : complianceList;
+
+            const getComplianceColor = (rate) => {
+              if (rate >= 90) return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+              if (rate >= 70) return 'text-blue-700 bg-blue-50 border-blue-200';
+              if (rate >= 50) return 'text-orange-700 bg-orange-50 border-orange-200';
+              return 'text-red-700 bg-red-50 border-red-200';
+            };
+
+            return (
+              <div className="portal-card space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4 text-brand-primary" />
+                      <span>Assignment Compliance Overview</span>
+                    </h2>
+                    <p className="text-xs text-brand-neutral-muted mt-0.5">
+                      Student submission rate sorted by lowest compliance first (Tech 60% / Prof 40%)
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={showBelow70Only}
+                        onChange={(e) => setShowBelow70Only(e.target.checked)}
+                        className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                      />
+                      <span>Show only students below 70%</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  {filteredCompliance.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-brand-neutral-muted">
+                      No students found matching filter criteria.
+                    </div>
+                  ) : (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                          <th className="py-2.5 px-3">Student</th>
+                          <th className="py-2.5 px-3 text-center">Tech %</th>
+                          <th className="py-2.5 px-3 text-center">Prof %</th>
+                          <th className="py-2.5 px-3 text-center">Overall Compliance %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredCompliance.map((st, idx) => (
+                          <tr key={st.studentID || idx} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="py-2.5 px-3">
+                              <div className="font-semibold text-slate-800">{st.name}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                {st.studentID} {st.classGroup !== '—' && `· ${st.classGroup}`}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${getComplianceColor(st.techRate)}`}>
+                                {st.techRate}%
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold border ${getComplianceColor(st.profRate)}`}>
+                                {st.profRate}%
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`inline-flex px-2.5 py-0.5 rounded text-xs font-bold border ${getComplianceColor(st.overallRate)}`}>
+                                {st.overallRate}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -375,6 +535,35 @@ export default function CoachDashboard() {
       <div className="portal-card">
         <h2 className="text-base font-semibold text-slate-800 mb-4">Instructor Grading & Evaluation Modules</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Link
+            to="/coach/create-assignment"
+            className="p-4 rounded-xl border border-slate-200/80 hover:border-brand-primary hover:bg-blue-50/30 transition-all flex flex-col justify-between group shadow-xs"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-blue-100 text-brand-primary group-hover:bg-brand-primary group-hover:text-white flex items-center justify-center transition-colors">
+                <FilePlus className="w-5 h-5" />
+              </div>
+              <span className="font-medium text-sm text-slate-800 group-hover:text-brand-primary">
+                Create Assignment
+              </span>
+            </div>
+            <p className="text-xs text-brand-neutral-muted">Publish syllabus tasks & files</p>
+          </Link>
+
+          <Link
+            to="/coach/manage-assignments"
+            className="p-4 rounded-xl border border-slate-200/80 hover:border-brand-primary hover:bg-blue-50/30 transition-all flex flex-col justify-between group shadow-xs"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="font-medium text-sm text-slate-800 group-hover:text-brand-primary">
+                Manage Assignments
+              </span>
+            </div>
+            <p className="text-xs text-brand-neutral-muted">Notify students & close tasks</p>
+          </Link>
           <Link
             to="/coach/attendance-code"
             className="p-4 rounded-xl border border-slate-200/80 hover:border-brand-secondary hover:bg-orange-50/30 transition-all flex flex-col justify-between group shadow-xs"

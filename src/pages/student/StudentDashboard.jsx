@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentDashboard } from '../../services/api';
+import { getStudentDashboard, getStudentPendingAssignments, getStudentCompliance } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import { CardSkeleton, KPIGridSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
@@ -30,6 +30,8 @@ export default function StudentDashboard() {
   const [performance, setPerformance] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
   const [classActivities, setClassActivities] = useState([]);
+  const [pendingAssignments, setPendingAssignments] = useState([]);
+  const [complianceData, setComplianceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -52,9 +54,14 @@ export default function StudentDashboard() {
 
       setLoading(true);
       try {
-        const res = await getStudentDashboard(studentID);
-        if (res && res.success !== false) {
-          const payload = res.data || res;
+        const [dashRes, pendingRes, compRes] = await Promise.all([
+          getStudentDashboard(studentID),
+          getStudentPendingAssignments(studentID).catch(() => null),
+          getStudentCompliance(studentID).catch(() => null)
+        ]);
+
+        if (dashRes && dashRes.success !== false) {
+          const payload = dashRes.data || dashRes;
           
           // 1. Performance Data
           const pData = payload.performance || (payload.finalScore !== undefined || payload.overallScore !== undefined ? payload : null);
@@ -68,6 +75,22 @@ export default function StudentDashboard() {
           const act = payload.activities || payload.classActivities || [];
           const list = Array.isArray(act) ? act : (act.records || act.data || []);
           setClassActivities(list);
+
+          if (payload.pendingAssignments) {
+            setPendingAssignments(Array.isArray(payload.pendingAssignments) ? payload.pendingAssignments : []);
+          }
+          if (payload.compliance) {
+            setComplianceData(payload.compliance);
+          }
+        }
+
+        if (pendingRes && pendingRes.success !== false) {
+          const pList = Array.isArray(pendingRes) ? pendingRes : (pendingRes.data || pendingRes.assignments || []);
+          setPendingAssignments(pList);
+        }
+
+        if (compRes && compRes.success !== false) {
+          setComplianceData(compRes.data || compRes);
         }
       } catch (err) {
         console.error('Error loading student dashboard records:', err);
@@ -221,6 +244,204 @@ export default function StudentDashboard() {
         </div>
       ) : (
         <>
+          {/* Card A & Card B: Assignments Due & Compliance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Card A: Assignments Due */}
+            <div className="portal-card flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📝</span>
+                    <h2 className="text-sm font-bold text-slate-800 tracking-tight">Assignments Due</h2>
+                  </div>
+                  {pendingAssignments.length > 0 && (
+                    <span className="badge-primary text-[10px]">
+                      {pendingAssignments.length} Pending
+                    </span>
+                  )}
+                </div>
+
+                {/* Overdue Warning Alert */}
+                {pendingAssignments.some(a => a.dueDate && new Date(a.dueDate) < new Date()) && (
+                  <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-700 font-semibold">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span>
+                      You have {pendingAssignments.filter(a => a.dueDate && new Date(a.dueDate) < new Date()).length} overdue assignment(s)!
+                    </span>
+                  </div>
+                )}
+
+                {/* Assignment List */}
+                <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {pendingAssignments.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-brand-neutral-muted space-y-1">
+                      <p className="text-emerald-700 font-semibold flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>No pending assignments. Great job!</span>
+                      </p>
+                      <p className="text-slate-400 text-[11px]">All assigned tasks have been submitted.</p>
+                    </div>
+                  ) : (
+                    pendingAssignments.map((asgn, idx) => {
+                      const asgnID = asgn.assignmentID || asgn.id;
+                      const title = asgn.title || asgn.assignmentTitle || 'Class Assignment';
+                      const tool = asgn.tool || (asgn.category === 'Technical' ? 'Excel' : 'SoftSkills');
+                      const due = asgn.dueDate ? new Date(asgn.dueDate) : null;
+                      const isOverdue = due && due < new Date();
+
+                      return (
+                        <div
+                          key={asgnID || idx}
+                          className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-100/70 transition-colors"
+                        >
+                          <div className="overflow-hidden space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-slate-800 truncate">
+                                {title}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-white text-[10px] font-medium text-slate-600 border border-slate-200">
+                                {tool}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px]">
+                              {due ? (
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                                  isOverdue
+                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                    : 'bg-orange-50 text-brand-secondary-dark border-orange-200'
+                                }`}>
+                                  <Clock className="w-3 h-3" />
+                                  <span>Due {due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">Open deadline</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <Link
+                            to={`/student/submit-assignment?assignmentID=${asgnID}`}
+                            className="btn-primary py-1.5 px-3 text-xs font-semibold flex-shrink-0 flex items-center gap-1"
+                          >
+                            <span>Submit Now</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Direct submission to Google Drive</span>
+                <Link to="/student/submit-assignment" className="text-brand-primary font-semibold hover:underline">
+                  Open Submissions →
+                </Link>
+              </div>
+            </div>
+
+            {/* Card B: Assignment Compliance */}
+            {(() => {
+              const techSub = complianceData?.technicalSubmitted ?? complianceData?.techSubmitted ?? (performance?.technicalAssignmentsSubmitted || 0);
+              const techTot = complianceData?.technicalTotal ?? complianceData?.techTotal ?? (performance?.technicalAssignmentsTotal || 10);
+              const techPct = techTot > 0 ? Math.round((techSub / techTot) * 100) : (complianceData?.technicalRate ?? 0);
+
+              const profSub = complianceData?.professionalSubmitted ?? complianceData?.profSubmitted ?? (performance?.professionalAssignmentsSubmitted || 0);
+              const profTot = complianceData?.professionalTotal ?? complianceData?.profTotal ?? (performance?.professionalAssignmentsTotal || 5);
+              const profPct = profTot > 0 ? Math.round((profSub / profTot) * 100) : (complianceData?.professionalRate ?? 0);
+
+              const overallPct = complianceData?.overallCompliance ?? complianceData?.overallRate ??
+                (techTot + profTot > 0 ? Math.round(((techSub + profSub) / (techTot + profTot)) * 100) : 0);
+
+              const missed = complianceData?.missedAssignments ??
+                ((techTot - techSub) + (profTot - profSub) > 0 ? (techTot - techSub) + (profTot - profSub) : 0);
+
+              return (
+                <div className="portal-card flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📋</span>
+                        <h2 className="text-sm font-bold text-slate-800 tracking-tight">Assignment Compliance</h2>
+                      </div>
+                      <span className="badge-primary text-[10px]">
+                        Overall: {overallPct}%
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-3.5">
+                      {/* Technical Compliance */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-medium text-slate-700">Technical Assignments</span>
+                          <span className="font-semibold text-slate-900">
+                            {techSub}/{techTot} submitted ({techPct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-brand-primary rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(0, techPct))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Professional Compliance */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-medium text-slate-700">Professional Assignments</span>
+                          <span className="font-semibold text-slate-900">
+                            {profSub}/{profTot} submitted ({profPct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-brand-secondary rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(0, profPct))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Overall Compliance Bar */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-semibold text-slate-800">Overall Syllabus Compliance</span>
+                          <span className="font-bold text-emerald-700">{overallPct}%</span>
+                        </div>
+                        <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              overallPct >= 80
+                                ? 'bg-emerald-600'
+                                : overallPct >= 60
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(100, Math.max(0, overallPct))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Missed Warning Alert */}
+                  {missed > 0 ? (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-800 font-medium">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <span>⚠️ {missed} missed assignment(s) — this directly impacts your cohort grade</span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs text-emerald-800 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span>All required deliverables up to date!</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Overall Score */}

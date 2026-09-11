@@ -232,3 +232,39 @@ export const getStudentAttendance = (studentID) =>
 
 export const getStudentClassActivities = (studentID) => 
   callApi('getStudentClassActivities', [studentID]);
+
+// Assignment Management
+export const createAssignment = (type, category, title, description, deliverables, tool, weekNumber, dayNumber, monthNumber, maxScore, allowedFileTypes, maxFilesAllowed, dueDate, notes, materialsArray, coachID) => 
+  callApi('createAssignment', [type, category, title, description, deliverables, tool, weekNumber, dayNumber, monthNumber, maxScore, allowedFileTypes, maxFilesAllowed, dueDate, notes, materialsArray, coachID]);
+
+export const getActiveAssignments = () => 
+  callApi('getActiveAssignments', []);
+
+export const getAssignmentByID = (assignmentID) => 
+  callApi('getAssignmentByID', [assignmentID]);
+
+export const getStudentPendingAssignments = (studentID) => 
+  callApi('getStudentPendingAssignments', [studentID]);
+
+export const notifyStudentsOfAssignment = (assignmentID) => 
+  callApi('notifyStudentsOfAssignment', [assignmentID]);
+
+export const closeAssignment = (assignmentID) => 
+  callApi('closeAssignment', [assignmentID]);
+
+// Compliance
+export const getStudentCompliance = (studentID) => 
+  callApi('getStudentCompliance', [studentID]);
+
+export const updateComplianceSummary = () => 
+  callApi('updateComplianceSummary', []);
+
+// Capstone Groups
+export const createCapstoneGroup = (capstoneGroupName, classGroupsArray, projectTitle, problemStatement, notes, coachID) => 
+  callApi('createCapstoneGroup', [capstoneGroupName, classGroupsArray, projectTitle, problemStatement, notes, coachID]);
+
+export const getAllCapstoneGroups = () => 
+  callApi('getAllCapstoneGroups', []);
+
+export const getAllClassGroups = () => 
+  callApi('getAllClassGroups', []);
