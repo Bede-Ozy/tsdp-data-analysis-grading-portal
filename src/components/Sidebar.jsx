@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const coachLinks = [
     { to: '/coach/dashboard', label: 'Coach Overview', icon: LayoutDashboard },
-    { to: '/coach/grade-submissions', label: 'Grade Submissions', icon: CheckSquare },
+    { to: '/coach/grade-assignments', label: 'Grade Assignments', icon: CheckSquare },
     { to: '/coach/class-activity', label: 'Record Class Activity', icon: MessageSquare },
     { to: '/coach/grade-module-projects', label: 'Grade Module Projects', icon: Database },
     { to: '/coach/grade-capstone', label: 'Grade Capstone Sprints', icon: Flag },

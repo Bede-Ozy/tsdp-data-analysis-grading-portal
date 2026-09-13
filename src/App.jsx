@@ -24,6 +24,7 @@ import ViewPerformance from './pages/student/ViewPerformance';
 import CoachLogin from './pages/coach/CoachLogin';
 import CoachDashboard from './pages/coach/CoachDashboard';
 import GenerateAttendanceCode from './pages/coach/GenerateAttendanceCode';
+import GradeAssignments from './pages/coach/GradeAssignments';
 import GradeSubmissions from './pages/coach/GradeSubmissions';
 import RecordClassActivity from './pages/coach/RecordClassActivity';
 import GradeModuleProjects from './pages/coach/GradeModuleProjects';
@@ -215,10 +216,18 @@ export default function App() {
               }
             />
             <Route
+              path="/coach/grade-assignments"
+              element={
+                <ProtectedRoute allowedRoles={['coach']}>
+                  <GradeAssignments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/coach/grade-submissions"
               element={
                 <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeSubmissions />
+                  <GradeAssignments />
                 </ProtectedRoute>
               }
             />

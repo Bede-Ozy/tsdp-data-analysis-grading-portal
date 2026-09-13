@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getStudentDashboard, getStudentPendingAssignments, getStudentCompliance, getActiveAssignments } from '../../services/api';
-import { PROGRAM_INFO, getGradeLetter } from '../../utils/constants';
+import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import { CardSkeleton, KPIGridSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
 import {
@@ -30,7 +30,11 @@ export default function StudentDashboard() {
   const [performance, setPerformance] = useState(null);
   const [attendanceData, setAttendanceData] = useState(null);
   const [classActivities, setClassActivities] = useState([]);
-  const [pendingAssignments, setPendingAssignments] = useState([]);
+  const [assignmentsState, setAssignmentsState] = useState({
+    pending: [],
+    overdue: [],
+    submitted: []
+  });
   const [complianceData, setComplianceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -62,9 +66,22 @@ export default function StudentDashboard() {
         ]);
 
         let pList = [];
+        let oList = [];
+        let sList = [];
+
         if (pendingRes && pendingRes.success !== false) {
-          const list = Array.isArray(pendingRes) ? pendingRes : (pendingRes.data || pendingRes.assignments || []);
-          pList = [...list];
+          const root = pendingRes.data && (pendingRes.data.pending || pendingRes.data.overdue || pendingRes.data.submitted) 
+            ? pendingRes.data 
+            : pendingRes;
+          
+          if (Array.isArray(root.pending)) pList = [...root.pending];
+          if (Array.isArray(root.overdue)) oList = [...root.overdue];
+          if (Array.isArray(root.submitted)) sList = [...root.submitted];
+
+          // Fallback if returned as flat array
+          if (Array.isArray(root) && pList.length === 0) {
+            pList = [...root];
+          }
         }
 
         if (dashRes && dashRes.success !== false) {
@@ -87,39 +104,83 @@ export default function StudentDashboard() {
             setComplianceData(payload.compliance);
           }
 
-          // Submissions to check what student has already submitted
+          // Submissions from dashboard
           const subs = payload.submissions || payload.pendingSubmissions || [];
-          const submittedSet = new Set(subs.map(s => String(s.assignmentID || s.id || '').trim().toLowerCase()));
+          subs.forEach(s => {
+            if (s && !sList.some(item => (item.assignmentID || item.id) === (s.assignmentID || s.id))) {
+              sList.push(s);
+            }
+          });
+        }
 
-          if (activeAsgnRes && activeAsgnRes.success !== false) {
-            const activeList = Array.isArray(activeAsgnRes) ? activeAsgnRes : (activeAsgnRes.data || activeAsgnRes.assignments || []);
-            activeList.forEach(item => {
-              const itemId = String(item.assignmentID || item.id || '').trim();
-              const status = String(item.status || '').toLowerCase();
-              const isClosed = status === 'closed' || item.isClosed;
-              if (!isClosed) {
-                const alreadyInList = pList.some(p => String(p.assignmentID || p.id || '').trim().toLowerCase() === itemId.toLowerCase());
-                const alreadySubmitted = itemId && submittedSet.has(itemId.toLowerCase());
-                if (!alreadyInList && !alreadySubmitted) {
-                  pList.push(item);
-                }
+        // Check local storage module submissions
+        try {
+          const localMods = JSON.parse(localStorage.getItem('tsdp_module_project_submissions') || '[]');
+          localMods.forEach(m => {
+            if (m.studentID === studentID || m.studentID === user?.studentNumber) {
+              if (!sList.some(s => s.type === 'ModuleProject' && Number(s.monthNumber) === Number(m.monthNumber))) {
+                sList.push({
+                  assignmentID: m.projectID,
+                  title: m.projectTitle,
+                  tool: m.tool,
+                  monthNumber: m.monthNumber,
+                  type: 'ModuleProject',
+                  submittedAt: m.submittedAt,
+                  fileURL: m.files?.[0]?.url || ''
+                });
               }
-            });
-          }
-        } else if (activeAsgnRes && activeAsgnRes.success !== false) {
+            }
+          });
+        } catch (e) {}
+
+        // Build set of all submitted items to ensure pending/overdue NEVER contain submitted items
+        const submittedIdSet = new Set(sList.map(s => String(s.assignmentID || s.id || '').trim().toLowerCase()).filter(Boolean));
+        const submittedModSet = new Set(
+          sList
+            .filter(s => s.type === 'ModuleProject' || s.monthNumber)
+            .map(s => `m${s.monthNumber}_${String(s.tool || '').toLowerCase()}`)
+        );
+
+        // Filter out submitted items from pending & overdue
+        pList = pList.filter(a => {
+          const id = String(a.assignmentID || a.id || '').trim().toLowerCase();
+          const modKey = `m${a.monthNumber}_${String(a.tool || '').toLowerCase()}`;
+          return !submittedIdSet.has(id) && !submittedModSet.has(modKey);
+        });
+
+        oList = oList.filter(a => {
+          const id = String(a.assignmentID || a.id || '').trim().toLowerCase();
+          const modKey = `m${a.monthNumber}_${String(a.tool || '').toLowerCase()}`;
+          return !submittedIdSet.has(id) && !submittedModSet.has(modKey);
+        });
+
+        // If active syllabus assignments exist, merge if not submitted and not already in lists
+        if (activeAsgnRes && activeAsgnRes.success !== false) {
           const activeList = Array.isArray(activeAsgnRes) ? activeAsgnRes : (activeAsgnRes.data || activeAsgnRes.assignments || []);
           activeList.forEach(item => {
-            const itemId = String(item.assignmentID || item.id || '').trim();
-            const status = String(item.status || '').toLowerCase();
-            if (status !== 'closed' && !item.isClosed) {
-              if (!pList.some(p => String(p.assignmentID || p.id || '').trim().toLowerCase() === itemId.toLowerCase())) {
+            const itemId = String(item.assignmentID || item.id || '').trim().toLowerCase();
+            const modKey = `m${item.monthNumber}_${String(item.tool || '').toLowerCase()}`;
+            const isClosed = String(item.status || '').toLowerCase() === 'closed' || item.isClosed;
+            const isSubmitted = (itemId && submittedIdSet.has(itemId)) || submittedModSet.has(modKey);
+            const alreadyInLists = pList.some(p => String(p.assignmentID || p.id || '').trim().toLowerCase() === itemId) ||
+                                   oList.some(o => String(o.assignmentID || o.id || '').trim().toLowerCase() === itemId);
+
+            if (!isClosed && !isSubmitted && !alreadyInLists) {
+              const due = item.dueDate ? new Date(item.dueDate) : null;
+              if (due && due < new Date()) {
+                oList.push(item);
+              } else {
                 pList.push(item);
               }
             }
           });
         }
 
-        setPendingAssignments(pList);
+        setAssignmentsState({
+          pending: pList,
+          overdue: oList,
+          submitted: sList
+        });
 
         if (compRes && compRes.success !== false) {
           setComplianceData(compRes.data || compRes);
@@ -270,41 +331,56 @@ export default function StudentDashboard() {
       </div>
 
       {/* Active Deliverable Notification Banner */}
-      {!loading && pendingAssignments.length > 0 && (
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-orange-50/40 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-              <Sparkles className="w-5 h-5 text-brand-secondary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-brand-primary">
-                  Active Syllabus Deliverable Due
-                </span>
-                <span className="badge-secondary text-[10px]">
-                  {pendingAssignments.length} Task{pendingAssignments.length > 1 ? 's' : ''} Pending
-                </span>
-              </div>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">
-                {pendingAssignments[0].title || pendingAssignments[0].assignmentTitle}
-                {pendingAssignments[0].type === 'ModuleProject' && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
-                    Monthly Module Project
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
+      {!loading && (assignmentsState.pending.length + assignmentsState.overdue.length) > 0 && (() => {
+        const dueList = [...assignmentsState.overdue, ...assignmentsState.pending];
+        const totalDue = dueList.length;
+        const first = dueList[0];
+        const isMod = first.type === 'ModuleProject';
+        const targetUrl = isMod
+          ? `/student/submit-module-project?month=${first.monthNumber || 1}`
+          : `/student/submit-assignment?assignmentID=${first.assignmentID || first.id}`;
 
-          <Link
-            to={`/student/submit-assignment?assignmentID=${pendingAssignments[0].assignmentID || pendingAssignments[0].id}`}
-            className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-2 self-start sm:self-auto flex-shrink-0"
-          >
-            <span>Submit Solution Now</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      )}
+        return (
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-orange-50/40 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                <Sparkles className="w-5 h-5 text-brand-secondary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-primary">
+                    Active Syllabus Deliverable Due
+                  </span>
+                  <span className="badge-secondary text-[10px]">
+                    {totalDue} Task{totalDue > 1 ? 's' : ''} Pending
+                  </span>
+                  {assignmentsState.overdue.length > 0 && (
+                    <span className="badge-danger text-[10px] bg-red-50 text-red-700 border-red-200">
+                      {assignmentsState.overdue.length} Overdue
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-slate-800 mt-0.5">
+                  {first.title || first.assignmentTitle}
+                  {isMod && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
+                      Monthly Module Project
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to={targetUrl}
+              className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-2 self-start sm:self-auto flex-shrink-0"
+            >
+              <span>Submit Solution Now</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        );
+      })()}
 
       {loading ? (
         <div className="space-y-6">
@@ -316,109 +392,149 @@ export default function StudentDashboard() {
           {/* Card A & Card B: Assignments Due & Compliance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Card A: Assignments Due */}
-            <div className="portal-card flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">📝</span>
-                    <h2 className="text-sm font-bold text-slate-800 tracking-tight">Assignments Due</h2>
-                  </div>
-                  {pendingAssignments.length > 0 && (
-                    <span className="badge-primary text-[10px]">
-                      {pendingAssignments.length} Pending
-                    </span>
-                  )}
-                </div>
+            {(() => {
+              const dueList = [...assignmentsState.overdue, ...assignmentsState.pending];
+              const totalDue = dueList.length;
 
-                {/* Overdue Warning Alert */}
-                {pendingAssignments.some(a => a.dueDate && new Date(a.dueDate) < new Date()) && (
-                  <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-700 font-semibold">
-                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                    <span>
-                      You have {pendingAssignments.filter(a => a.dueDate && new Date(a.dueDate) < new Date()).length} overdue assignment(s)!
-                    </span>
-                  </div>
-                )}
-
-                {/* Assignment List */}
-                <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {pendingAssignments.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-brand-neutral-muted space-y-1">
-                      <p className="text-emerald-700 font-semibold flex items-center justify-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>No pending assignments. Great job!</span>
-                      </p>
-                      <p className="text-slate-400 text-[11px]">All assigned tasks have been submitted.</p>
-                    </div>
-                  ) : (
-                    pendingAssignments.map((asgn, idx) => {
-                      const asgnID = asgn.assignmentID || asgn.id;
-                      const title = asgn.title || asgn.assignmentTitle || 'Class Assignment';
-                      const tool = asgn.tool || (asgn.category === 'Technical' ? 'Excel' : 'SoftSkills');
-                      const due = asgn.dueDate ? new Date(asgn.dueDate) : null;
-                      const isOverdue = due && due < new Date();
-                      const isModuleProject = asgn.type === 'ModuleProject';
-
-                      return (
-                        <div
-                          key={asgnID || idx}
-                          className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-100/70 transition-colors"
-                        >
-                          <div className="overflow-hidden space-y-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {isModuleProject ? (
-                                <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
-                                  📁 Module Project {asgn.monthNumber ? `(Month ${asgn.monthNumber})` : ''}
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded bg-blue-100 text-brand-primary text-[10px] font-bold">
-                                  📝 Assignment {asgn.weekNumber ? `(W${asgn.weekNumber}D${asgn.dayNumber || 1})` : ''}
-                                </span>
-                              )}
-                              <span className="font-semibold text-xs text-slate-800 truncate">
-                                {title}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded bg-white text-[10px] font-medium text-slate-600 border border-slate-200">
-                                {tool}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-[11px]">
-                              {due ? (
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                                  isOverdue
-                                    ? 'bg-red-50 text-red-700 border-red-200'
-                                    : 'bg-orange-50 text-brand-secondary-dark border-orange-200'
-                                }`}>
-                                  <Clock className="w-3 h-3" />
-                                  <span>Due {due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">Open deadline</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <Link
-                            to={`/student/submit-assignment?assignmentID=${asgnID}`}
-                            className="btn-primary py-1.5 px-3 text-xs font-semibold flex-shrink-0 flex items-center gap-1"
-                          >
-                            <span>Submit Now</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </Link>
+              return (
+                <div className="portal-card flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📝</span>
+                        <h2 className="text-sm font-bold text-slate-800 tracking-tight">Assignments Due</h2>
+                      </div>
+                      {totalDue > 0 ? (
+                        <div className="flex items-center gap-1.5">
+                          {assignmentsState.overdue.length > 0 && (
+                            <span className="badge-danger text-[10px] bg-red-50 text-red-700 border-red-200 font-bold">
+                              {assignmentsState.overdue.length} Overdue
+                            </span>
+                          )}
+                          {assignmentsState.pending.length > 0 && (
+                            <span className="badge-primary text-[10px]">
+                              {assignmentsState.pending.length} Pending
+                            </span>
+                          )}
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          All Submitted ✅
+                        </span>
+                      )}
+                    </div>
 
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                <span>Direct submission to Google Drive</span>
-                <Link to="/student/submit-assignment" className="text-brand-primary font-semibold hover:underline">
-                  Open Submissions →
-                </Link>
-              </div>
-            </div>
+                    {/* Overdue Warning Alert */}
+                    {assignmentsState.overdue.length > 0 && (
+                      <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-700 font-semibold">
+                        <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                        <span>
+                          You have {assignmentsState.overdue.length} overdue assignment{assignmentsState.overdue.length > 1 ? 's' : ''}!
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Assignment List */}
+                    <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {totalDue === 0 ? (
+                        <div className="py-8 text-center text-xs text-brand-neutral-muted space-y-2">
+                          <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner ring-4 ring-emerald-50">
+                            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <p className="text-emerald-800 font-bold text-sm">
+                            All assignments submitted ✅
+                          </p>
+                          <p className="text-slate-500 text-xs">Great job staying on track! You have no pending or overdue deliverables.</p>
+                        </div>
+                      ) : (
+                        dueList.map((asgn, idx) => {
+                          const asgnID = asgn.assignmentID || asgn.id;
+                          const title = asgn.title || asgn.assignmentTitle || 'Class Assignment';
+                          const tool = asgn.tool || (asgn.category === 'Technical' ? 'Excel' : 'SoftSkills');
+                          const due = asgn.dueDate ? new Date(asgn.dueDate) : null;
+                          const isOverdue = asgn.isOverdue || (due && due < new Date()) || assignmentsState.overdue.some(o => (o.assignmentID || o.id) === asgnID);
+                          const isModuleProject = asgn.type === 'ModuleProject';
+
+                          const submitTarget = isModuleProject
+                            ? `/student/submit-module-project?month=${asgn.monthNumber || 1}`
+                            : `/student/submit-assignment?assignmentID=${asgnID}`;
+
+                          return (
+                            <div
+                              key={asgnID || idx}
+                              className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                                isOverdue
+                                  ? 'bg-red-50/60 border-red-200 hover:bg-red-50/80'
+                                  : 'bg-slate-50 border-slate-200/80 hover:bg-slate-100/70'
+                              }`}
+                            >
+                              <div className="overflow-hidden space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {isModuleProject ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
+                                      📁 Module Project {asgn.monthNumber ? `(Month ${asgn.monthNumber})` : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-100 text-brand-primary text-[10px] font-bold">
+                                      📝 Assignment {asgn.weekNumber ? `(W${asgn.weekNumber}D${asgn.dayNumber || 1})` : ''}
+                                    </span>
+                                  )}
+                                  <span className="font-semibold text-xs text-slate-800 truncate">
+                                    {title}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded bg-white text-[10px] font-medium text-slate-600 border border-slate-200">
+                                    {tool}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  {isOverdue ? (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-red-50 text-red-700 border-red-200">
+                                      <Clock className="w-3 h-3" />
+                                      <span>Overdue {due ? `(${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : ''}</span>
+                                    </span>
+                                  ) : due ? (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-orange-50 text-brand-secondary-dark border-orange-200">
+                                      <Clock className="w-3 h-3" />
+                                      <span>Due {due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-orange-50 text-brand-secondary-dark border-orange-200">
+                                      <Clock className="w-3 h-3" />
+                                      <span>Pending</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {isOverdue ? (
+                                <span className="px-2.5 py-1 text-[11px] font-semibold text-red-700 bg-red-100/80 rounded-lg flex-shrink-0 border border-red-200">
+                                  Overdue
+                                </span>
+                              ) : (
+                                <Link
+                                  to={submitTarget}
+                                  className="btn-primary py-1.5 px-3 text-xs font-semibold flex-shrink-0 flex items-center gap-1"
+                                >
+                                  <span>Submit Now</span>
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Direct submission to Google Drive</span>
+                    <Link to="/student/submit-assignment" className="text-brand-primary font-semibold hover:underline">
+                      Open Submissions →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Card B: Assignment Compliance */}
             {(() => {
@@ -535,16 +651,16 @@ export default function StudentDashboard() {
           </div>
 
           {/* Summary KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Overall Score */}
         <div className="portal-card">
           <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
             <span className="text-xs font-medium text-slate-500 tracking-wide">Overall Score</span>
             <TrendingUp className="w-4 h-4 text-brand-primary" />
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-              {overallScore !== null ? `${overallScore}%` : '0%'}
+              {formatScore(overallScore)}
             </span>
             <span className={`px-2 py-0.5 rounded text-xs font-medium border ${gradeInfo.color}`}>
               {gradeInfo.letter}
@@ -561,7 +677,7 @@ export default function StudentDashboard() {
             <span className="text-xs font-medium text-slate-500 tracking-wide">Cohort Rank</span>
             <Award className="w-4 h-4 text-brand-secondary" />
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-secondary">
               {rank || '—'}
             </span>
@@ -578,7 +694,7 @@ export default function StudentDashboard() {
             <span className="text-xs font-medium text-slate-500 tracking-wide">Attendance Rate</span>
             <Clock className="w-4 h-4 text-brand-primary" />
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
               {attendanceRateDisplay}
             </span>
@@ -586,7 +702,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* Two small labels under the Attendance KPI: Present: X% and Late: Y% */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
               Present: {presentRate.toFixed(1)}%
             </span>
@@ -606,7 +722,7 @@ export default function StudentDashboard() {
             <span className="text-xs font-medium text-slate-500 tracking-wide">Curriculum Phase</span>
             <BookOpen className="w-4 h-4 text-brand-primary" />
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-xl sm:text-2xl font-semibold text-brand-neutral">Data Analytics</span>
             <span className="badge-primary text-[10px]">Week {PROGRAM_INFO.currentWeek}</span>
           </div>

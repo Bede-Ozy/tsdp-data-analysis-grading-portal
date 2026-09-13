@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllStudents } from '../../services/api';
-import { GRADING_WEIGHTS, getGradeLetter, PROGRAM_INFO } from '../../utils/constants';
+import { GRADING_WEIGHTS, getGradeLetter, PROGRAM_INFO, formatScore } from '../../utils/constants';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FileBarChart, Download, Printer, Award, TrendingUp, CheckCircle2 } from 'lucide-react';
 
@@ -42,8 +42,8 @@ export default function ViewReports() {
     const headers = ['StudentID', 'StudentNumber', 'Name', 'Email', 'ClassGroup', 'CapstoneGroup', 'AttendanceRate', 'OverallScore', 'GradeLetter'];
     const rows = students.map(s => {
       const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.studentID;
-      const att = s.attendanceRate !== undefined && s.attendanceRate !== null ? `${s.attendanceRate}%` : 'N/A';
-      const score = s.overallScore !== undefined && s.overallScore !== null ? `${s.overallScore}%` : 'N/A';
+      const att = s.attendanceRate !== undefined && s.attendanceRate !== null ? formatScore(s.attendanceRate, 1, 'N/A') : 'N/A';
+      const score = s.overallScore !== undefined && s.overallScore !== null ? formatScore(s.overallScore, 2, 'N/A') : 'N/A';
       const letter = s.overallScore !== undefined && s.overallScore !== null ? getGradeLetter(s.overallScore).letter : 'Pending';
       return [
         s.studentID,

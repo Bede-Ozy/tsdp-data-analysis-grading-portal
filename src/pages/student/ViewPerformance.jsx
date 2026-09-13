@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getStudentPerformance, getStudentAttendance } from '../../services/api';
-import { getGradeLetter, PROGRAM_INFO } from '../../utils/constants';
+import { getGradeLetter, PROGRAM_INFO, formatScore } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Award, Clock, Calendar, CheckCircle2, TrendingUp, AlertCircle, FileText } from 'lucide-react';
@@ -141,7 +141,7 @@ export default function ViewPerformance() {
 
             <div className="bg-white p-3 rounded-xl border border-slate-200 text-center shadow-xs min-w-[100px]">
               <span className="text-[10px] uppercase font-medium text-slate-400 block">Aggregate</span>
-              <span className="text-2xl font-semibold text-brand-success">{overallScore !== null ? `${overallScore}%` : '—'}</span>
+              <span className="text-2xl font-semibold text-brand-success">{overallScore !== null ? formatScore(overallScore, 2, '—') : '—'}</span>
             </div>
           </div>
         </div>

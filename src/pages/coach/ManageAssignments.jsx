@@ -11,6 +11,7 @@ import {
   getAssignmentSubmissionCount
 } from '../../services/api';
 import { TableSkeleton } from '../../components/SkeletonLoader';
+import CustomSelect from '../../components/CustomSelect';
 import { TOOLS_LIST } from '../../utils/constants';
 import {
   FileText,
@@ -407,29 +408,33 @@ export default function ManageAssignments() {
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span>Category:</span>
             </div>
-            <select
+            <CustomSelect
+              className="w-40"
+              triggerClassName="py-1.5 px-2.5 text-xs font-medium"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="text-xs py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-brand-primary font-medium"
-            >
-              <option value="All">All Categories</option>
-              <option value="Technical">Technical</option>
-              <option value="Professional">Professional</option>
-            </select>
+              onChange={(val) => setCategoryFilter(val)}
+              options={[
+                { value: 'All', label: 'All Categories' },
+                { value: 'Technical', label: 'Technical' },
+                { value: 'Professional', label: 'Professional' }
+              ]}
+            />
 
             <div className="flex items-center gap-1.5 text-xs text-slate-500 ml-2">
               <span>Status:</span>
             </div>
-            <select
+            <CustomSelect
+              className="w-36"
+              triggerClassName="py-1.5 px-2.5 text-xs font-medium"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-brand-primary font-medium"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Closed">Closed</option>
-              <option value="Deleted">Deleted</option>
-            </select>
+              onChange={(val) => setStatusFilter(val)}
+              options={[
+                { value: 'All', label: 'All Statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Closed', label: 'Closed' },
+                { value: 'Deleted', label: 'Deleted' }
+              ]}
+            />
           </div>
         </div>
 
@@ -698,40 +703,38 @@ export default function ManageAssignments() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="form-label">Category</label>
-                  <select
+                  <CustomSelect
                     value={editForm.category}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="form-input text-xs"
-                  >
-                    <option value="Technical">Technical</option>
-                    <option value="Professional">Professional</option>
-                  </select>
+                    onChange={(val) => setEditForm(prev => ({ ...prev, category: val }))}
+                    options={[
+                      { value: 'Technical', label: 'Technical' },
+                      { value: 'Professional', label: 'Professional' }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Tool / Domain</label>
-                  <select
+                  <CustomSelect
                     value={editForm.tool}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, tool: e.target.value }))}
-                    className="form-input text-xs"
-                  >
-                    {TOOLS_LIST.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                    <option value="SoftSkills">SoftSkills</option>
-                  </select>
+                    onChange={(val) => setEditForm(prev => ({ ...prev, tool: val }))}
+                    options={[
+                      ...TOOLS_LIST.map(t => ({ value: t, label: t })),
+                      { value: 'SoftSkills', label: 'SoftSkills' }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Status</label>
-                  <select
+                  <CustomSelect
                     value={editForm.status}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="form-input text-xs"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Closed">Closed</option>
-                  </select>
+                    onChange={(val) => setEditForm(prev => ({ ...prev, status: val }))}
+                    options={[
+                      { value: 'Active', label: 'Active' },
+                      { value: 'Closed', label: 'Closed' }
+                    ]}
+                  />
                 </div>
               </div>
 

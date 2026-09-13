@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { createAssignment, notifyStudentsOfAssignment } from '../../services/api';
 import { filesToBase64Array } from '../../components/FileUploader';
+import CustomSelect from '../../components/CustomSelect';
 import { TOOLS_LIST } from '../../utils/constants';
 import {
   FilePlus,
@@ -293,27 +294,27 @@ export default function CreateAssignment() {
             {/* Type */}
             <div>
               <label className="form-label">Deliverable Type</label>
-              <select
+              <CustomSelect
                 value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="form-input"
-              >
-                <option value="Assignment">Daily / Weekly Assignment</option>
-                <option value="ModuleProject">Monthly Module Project</option>
-              </select>
+                onChange={(val) => setType(val)}
+                options={[
+                  { value: 'Assignment', label: 'Daily / Weekly Assignment' },
+                  { value: 'ModuleProject', label: 'Monthly Module Project' }
+                ]}
+              />
             </div>
 
             {/* Category */}
             <div>
               <label className="form-label">Curriculum Category</label>
-              <select
+              <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="form-input"
-              >
-                <option value="Technical">Technical (Excel, SQL, PowerBI, Python)</option>
-                <option value="Professional">Professional (Soft Skills, Presentation, Report)</option>
-              </select>
+                onChange={(val) => setCategory(val)}
+                options={[
+                  { value: 'Technical', label: 'Technical (Excel, SQL, PowerBI, Python)' },
+                  { value: 'Professional', label: 'Professional (Soft Skills, Presentation, Report)' }
+                ]}
+              />
             </div>
           </div>
 
@@ -323,58 +324,53 @@ export default function CreateAssignment() {
               <>
                 <div>
                   <label className="form-label">Week Number (1–16)</label>
-                  <select
+                  <CustomSelect
                     value={weekNumber}
-                    onChange={(e) => setWeekNumber(e.target.value)}
-                    className="form-input"
-                  >
-                    {Array.from({ length: 16 }, (_, i) => i + 1).map(w => (
-                      <option key={w} value={w}>Week {w}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setWeekNumber(Number(val))}
+                    options={Array.from({ length: 16 }, (_, i) => ({
+                      value: i + 1,
+                      label: `Week ${i + 1}`
+                    }))}
+                  />
                 </div>
 
                 <div>
                   <label className="form-label">Day Number (1–5)</label>
-                  <select
+                  <CustomSelect
                     value={dayNumber}
-                    onChange={(e) => setDayNumber(e.target.value)}
-                    className="form-input"
-                  >
-                    {[1, 2, 3, 4, 5].map(d => (
-                      <option key={d} value={d}>Day {d}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setDayNumber(Number(val))}
+                    options={[1, 2, 3, 4, 5].map(d => ({
+                      value: d,
+                      label: `Day ${d}`
+                    }))}
+                  />
                 </div>
               </>
             ) : (
               <div>
                 <label className="form-label">Month Number (1–4)</label>
-                <select
+                <CustomSelect
                   value={monthNumber}
-                  onChange={(e) => setMonthNumber(e.target.value)}
-                  className="form-input"
-                >
-                  {[1, 2, 3, 4].map(m => (
-                    <option key={m} value={m}>Month {m}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setMonthNumber(Number(val))}
+                  options={[1, 2, 3, 4].map(m => ({
+                    value: m,
+                    label: `Month ${m}`
+                  }))}
+                />
               </div>
             )}
 
             {category === 'Technical' && (
               <div>
                 <label className="form-label">Analytics Tool</label>
-                <select
+                <CustomSelect
                   value={tool}
-                  onChange={(e) => setTool(e.target.value)}
-                  className="form-input"
-                >
-                  {TOOLS_LIST.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                  <option value="SoftSkills">SoftSkills</option>
-                </select>
+                  onChange={(val) => setTool(val)}
+                  options={[
+                    ...TOOLS_LIST.map(t => ({ value: t, label: t })),
+                    { value: 'SoftSkills', label: 'SoftSkills' }
+                  ]}
+                />
               </div>
             )}
           </div>
@@ -453,15 +449,14 @@ export default function CreateAssignment() {
 
             <div>
               <label className="form-label">Max Files Allowed</label>
-              <select
+              <CustomSelect
                 value={maxFilesAllowed}
-                onChange={(e) => setMaxFilesAllowed(Number(e.target.value))}
-                className="form-input"
-              >
-                {[1, 2, 3, 4, 5].map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'file' : 'files'}</option>
-                ))}
-              </select>
+                onChange={(val) => setMaxFilesAllowed(Number(val))}
+                options={[1, 2, 3, 4, 5].map(n => ({
+                  value: n,
+                  label: `${n} ${n === 1 ? 'file' : 'files'}`
+                }))}
+              />
             </div>
           </div>
 

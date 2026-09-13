@@ -209,11 +209,14 @@ export const approveSocialMediaPost = (postID, score, feedback, coachID) =>
   callApi('approveSocialMediaPost', [postID, score, feedback, coachID]);
 
 // Supplementary helpers
-export const submitSocialMediaPost = (studentNumber, platform, postUrl, topic) =>
-  callApi('submitSocialMediaPost', [studentNumber, platform, postUrl, topic]);
+export const submitSocialMediaPost = (studentNumber, platform, postUrl, topic, caption = '') =>
+  callApi('submitSocialMediaPost', [studentNumber, platform, postUrl, topic, caption]);
 
 export const getPendingSubmissions = () => 
   callApi('getPendingSubmissions', []);
+
+export const getPendingModuleProjects = () => 
+  callApi('getPendingModuleProjects', []);
 
 export const getPendingSocialPosts = () => 
   callApi('getPendingSocialPosts', []);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Award, User, Calendar, BookOpen, ChevronRight, Mail } from 'lucide-react';
-import { getGradeLetter } from '../utils/constants';
+import { getGradeLetter, formatScore } from '../utils/constants';
 
 export default function StudentCard({ student, onViewDetails }) {
   if (!student) return null;
@@ -49,7 +49,7 @@ export default function StudentCard({ student, onViewDetails }) {
             <span className="text-brand-neutral-muted">Cumulative Score</span>
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-sm text-brand-neutral">
-                {hasScore ? `${student.overallScore}%` : '—'}
+                {hasScore ? formatScore(student.overallScore, 2, '—') : '—'}
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${gradeInfo.color}`}>
                 {gradeInfo.letter}

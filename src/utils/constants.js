@@ -37,7 +37,7 @@ export const TOOLS_LIST = ["Excel", "SQL", "PowerBI", "Python"];
 
 export const SESSION_TYPES = ["Physical", "Online"];
 
-export const SOCIAL_PLATFORMS = ["LinkedIn", "Twitter / X", "Facebook", "Instagram"];
+export const SOCIAL_PLATFORMS = ["LinkedIn", "Medium", "Instagram", "Twitter", "Facebook", "Others"];
 
 export const SOFT_SKILLS_CRITERIA = [
   { key: "communication", label: "Communication & Clarity", max: 5 },
@@ -70,4 +70,14 @@ export function getGradeLetter(score) {
   if (num >= 45) return { letter: "D", label: "Pass", color: "text-orange-600 bg-orange-50 border-orange-200" };
   return { letter: "F", label: "Fail / Incomplete", color: "text-red-600 bg-red-50 border-red-200" };
 }
+
+// Helper to format scores cleanly (max 2 decimal places, or integer if whole)
+export function formatScore(score, decimals = 2, fallback = '0%') {
+  if (score === null || score === undefined || score === '') return fallback;
+  const num = Number(score);
+  if (isNaN(num)) return String(score);
+  if (Number.isInteger(num)) return `${num}%`;
+  return `${num.toFixed(decimals)}%`;
+}
+
 
