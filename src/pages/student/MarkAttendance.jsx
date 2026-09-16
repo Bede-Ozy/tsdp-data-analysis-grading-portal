@@ -72,26 +72,62 @@ export default function MarkAttendance() {
         </Link>
       </div>
 
-      {/* Success Notification */}
+      {/* Success / Status Notification */}
       {result && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 space-y-2">
-          <div className="flex items-center gap-2 font-bold text-base text-emerald-800">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span>Attendance Successfully Recorded!</span>
+        <div
+          className={`p-4 rounded-xl border space-y-2 animate-fade-in ${
+            String(result.status || '').toLowerCase() === 'late'
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+          }`}
+        >
+          <div className="flex items-center gap-2 font-bold text-base">
+            {String(result.status || '').toLowerCase() === 'late' ? (
+              <Clock className="w-5 h-5 text-amber-600" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            )}
+            <span>
+              {String(result.status || '').toLowerCase() === 'late'
+                ? 'Attendance Recorded as Late'
+                : 'Attendance Successfully Recorded!'}
+            </span>
           </div>
-          <p className="text-xs text-emerald-700">{result.message}</p>
-          <div className="flex items-center gap-4 text-xs font-semibold pt-1 border-t border-emerald-100">
-            <span>Status: <strong className="text-brand-primary uppercase">{result.status}</strong></span>
-            <span>Recorded at: {result.timestamp}</span>
+          <p className="text-xs font-medium">
+            {result.message || `Attendance recorded as ${result.status || 'Present'}`}
+          </p>
+          <div
+            className={`flex items-center gap-4 text-xs font-semibold pt-1 border-t ${
+              String(result.status || '').toLowerCase() === 'late'
+                ? 'border-amber-200/80 text-amber-800'
+                : 'border-emerald-100 text-emerald-800'
+            }`}
+          >
+            <span>
+              Status:{' '}
+              <strong
+                className={`uppercase px-2 py-0.5 rounded text-[10px] font-bold border ${
+                  String(result.status || '').toLowerCase() === 'late'
+                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                }`}
+              >
+                {result.status || 'Present'}
+              </strong>
+            </span>
+            {result.timestamp && <span>Recorded at: {result.timestamp}</span>}
           </div>
         </div>
       )}
 
-      {/* Error Notification */}
+      {/* Error Notification (Expired Code or Invalid Code) */}
       {error && (
-        <div className="p-4 bg-red-50 border border-brand-error/20 rounded-xl text-brand-error flex items-start gap-2.5 text-xs font-medium">
+        <div className="p-4 bg-red-50 border border-brand-error/20 rounded-xl text-brand-error flex items-start gap-2.5 text-xs font-medium shadow-xs animate-fade-in">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <div className="space-y-0.5">
+            <span className="font-bold block">Attendance Marking Failed</span>
+            <span>{error}</span>
+          </div>
         </div>
       )}
 
@@ -153,19 +189,28 @@ export default function MarkAttendance() {
       <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900">
         <h4 className="font-bold flex items-center gap-1.5">
           <HelpCircle className="w-4 h-4 text-amber-600" />
-          TSDP 2026 Attendance Guidelines
+          TSDP 2026 Attendance Punctuality Rules
         </h4>
         <ul className="list-disc list-inside space-y-1 text-amber-800">
-          <li><strong>Punctuality:</strong> Marking attendance before or at 9:30 AM registers as <strong>Present</strong>.</li>
-          <li><strong>Lateness:</strong> Marking attendance after 9:30 AM is recorded as <strong>Late</strong>.</li>
-          <li><strong>Weighting:</strong> Attendance & Punctuality contributes <strong>10%</strong> to your final program grade.</li>
+          <li>
+            <strong>Present (On Time):</strong> Marking within <strong>5 minutes</strong> of code generation registers as <strong>Present (on time)</strong>.
+          </li>
+          <li>
+            <strong>Late Window:</strong> Marking between <strong>5 and 10 minutes</strong> registers as <strong>Late (after 5-minute window)</strong>.
+          </li>
+          <li>
+            <strong>Expired Code:</strong> Passcodes expire after <strong>10 minutes</strong> (<em>"Code has expired. Please contact your coach."</em>).
+          </li>
+          <li>
+            <strong>Weighting:</strong> Attendance & Punctuality contributes <strong>10%</strong> to your cumulative final grade.
+          </li>
         </ul>
       </div>
 
       {/* Celebration Success Pop-up Modal */}
       {showSuccessModal && result && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-emerald-100 text-center space-y-5 animate-scale-up relative">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 text-center space-y-5 animate-scale-up relative">
             <button
               type="button"
               onClick={() => setShowSuccessModal(false)}
@@ -174,16 +219,42 @@ export default function MarkAttendance() {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner ring-8 ring-emerald-50">
-              <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600" />
+            <div
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto shadow-inner ring-8 ${
+                String(result.status || '').toLowerCase() === 'late'
+                  ? 'bg-amber-100 text-amber-600 ring-amber-50'
+                  : 'bg-emerald-100 text-emerald-600 ring-emerald-50'
+              }`}
+            >
+              {String(result.status || '').toLowerCase() === 'late' ? (
+                <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-amber-600" />
+              ) : (
+                <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600" />
+              )}
             </div>
 
             <div className="space-y-2">
               <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                Attendance Recorded!
+                {String(result.status || '').toLowerCase() === 'late'
+                  ? 'Attendance Recorded as Late'
+                  : 'Attendance Recorded!'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Your presence for today's <strong className="text-brand-primary">{sessionType} Session</strong> has been successfully marked as <strong className="uppercase text-emerald-700">{result.status || 'Present'}</strong>.
+                {result.message || (
+                  <>
+                    Your presence for today's <strong className="text-brand-primary">{sessionType} Session</strong> has been marked as{' '}
+                    <strong
+                      className={`uppercase ${
+                        String(result.status || '').toLowerCase() === 'late'
+                          ? 'text-amber-700 font-bold'
+                          : 'text-emerald-700 font-bold'
+                      }`}
+                    >
+                      {result.status || 'Present'}
+                    </strong>
+                    .
+                  </>
+                )}
               </p>
             </div>
 

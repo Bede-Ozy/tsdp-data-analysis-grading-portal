@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentDashboard, getStudentPendingAssignments, getStudentCompliance, getActiveAssignments } from '../../services/api';
+import { getStudentDashboard, getStudentPendingAssignments, getStudentCompliance, getActiveAssignments, getStudentGroupRank } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import { CardSkeleton, KPIGridSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
@@ -22,7 +22,9 @@ import {
   Check,
   Activity,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  Trophy,
+  Users
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -36,6 +38,7 @@ export default function StudentDashboard() {
     submitted: []
   });
   const [complianceData, setComplianceData] = useState(null);
+  const [groupRankData, setGroupRankData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -58,11 +61,12 @@ export default function StudentDashboard() {
 
       setLoading(true);
       try {
-        const [dashRes, pendingRes, compRes, activeAsgnRes] = await Promise.all([
+        const [dashRes, pendingRes, compRes, activeAsgnRes, groupRankRes] = await Promise.all([
           getStudentDashboard(studentID),
           getStudentPendingAssignments(studentID || user?.studentNumber).catch(() => null),
           getStudentCompliance(studentID || user?.studentNumber).catch(() => null),
-          getActiveAssignments().catch(() => null)
+          getActiveAssignments().catch(() => null),
+          getStudentGroupRank(studentID || user?.studentNumber).catch(() => null)
         ]);
 
         let pList = [];
@@ -184,6 +188,28 @@ export default function StudentDashboard() {
 
         if (compRes && compRes.success !== false) {
           setComplianceData(compRes.data || compRes);
+        }
+
+        // Process Student Group Rank Data from Backend
+        if (groupRankRes && groupRankRes.success !== false) {
+          const root = groupRankRes.data || groupRankRes;
+          const totalGroups = Array.isArray(root.fullLeaderboard) && root.fullLeaderboard.length > 0 
+            ? root.fullLeaderboard.length 
+            : (root.totalGroups ?? root.totalTeams ?? 4);
+
+          setGroupRankData({
+            groupName: root.myGroup || root.groupName || root.group || user?.classGroup || 'Your Group',
+            rank: root.myRank !== undefined && root.myRank !== null ? root.myRank : (root.rank || null),
+            totalGroups: totalGroups,
+            average: root.myAverageScore !== undefined ? root.myAverageScore : (root.average ?? root.averageScore ?? 0),
+            total: root.myTotalScore !== undefined ? root.myTotalScore : (root.total ?? root.totalScore ?? 0),
+            latest: root.myLatestScore !== undefined ? root.myLatestScore : (root.latest ?? root.latestScore ?? 0),
+            presentationCount: root.presentationCount ?? 0,
+            leadingGroup: root.leadingGroup || null,
+            leadingScore: root.leadingScore !== undefined ? root.leadingScore : null
+          });
+        } else {
+          setGroupRankData(null);
         }
       } catch (err) {
         console.error('Error loading student dashboard records:', err);
@@ -729,6 +755,98 @@ export default function StudentDashboard() {
           <p className="text-[11px] text-brand-neutral-muted mt-2">4-month professional specialization</p>
         </div>
       </div>
+
+      {/* Your Group Rank Card */}
+      {groupRankData && (
+        <div className="portal-card bg-gradient-to-br from-white via-cyan-50/20 to-blue-50/30 border-cyan-200/80 shadow-xs relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-lg shadow-xs">
+                🏆
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-800 tracking-tight">Your Group Rank</h2>
+                  <span className="badge-primary text-[10px] font-bold">
+                    {groupRankData.groupName}
+                  </span>
+                </div>
+                <p className="text-xs text-brand-neutral-muted">Group presentation standings & cohort leaderboard (10% program weight)</p>
+              </div>
+            </div>
+            <div className="text-xs text-slate-500 font-medium">
+              Rank:{' '}
+              {groupRankData.rank ? (
+                <>
+                  <strong className="text-brand-secondary font-bold text-sm">#{groupRankData.rank}</strong> of{' '}
+                  {groupRankData.totalGroups}
+                </>
+              ) : (
+                <span className="text-slate-400 font-semibold italic">Pending evaluation</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-center shadow-xs">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Group Rank</span>
+              <span className="text-xl sm:text-2xl font-bold text-brand-secondary mt-0.5 block">
+                {groupRankData.rank ? `#${groupRankData.rank}` : '—'}
+                {groupRankData.rank && (
+                  <span className="text-xs font-normal text-slate-400"> of {groupRankData.totalGroups}</span>
+                )}
+              </span>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-center shadow-xs">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Group Average</span>
+              <span className="text-xl sm:text-2xl font-bold text-brand-primary mt-0.5 block">
+                {groupRankData.presentationCount > 0 || Number(groupRankData.average) > 0
+                  ? `${groupRankData.average}%`
+                  : '—'}
+              </span>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-center shadow-xs">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Total Points</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-800 mt-0.5 block">
+                {groupRankData.presentationCount > 0 || Number(groupRankData.total) > 0
+                  ? `${groupRankData.total} pts`
+                  : '—'}
+              </span>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200/80 text-center shadow-xs">
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Latest Presentation</span>
+              <span className="text-xl sm:text-2xl font-bold text-emerald-600 mt-0.5 block">
+                {groupRankData.presentationCount > 0 || Number(groupRankData.latest) > 0
+                  ? `${groupRankData.latest}%`
+                  : '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Leading Group Callout */}
+          <div className="mt-3.5 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs text-amber-900">
+            <div className="flex items-center gap-2 font-medium">
+              <span className="text-base">🥇</span>
+              <span>
+                {groupRankData.leadingGroup ? (
+                  <>
+                    Leading: <strong className="text-slate-900 font-bold">{groupRankData.leadingGroup}</strong> (
+                    {groupRankData.leadingScore}%)
+                  </>
+                ) : (
+                  <span>Awaiting presentation grading</span>
+                )}
+              </span>
+            </div>
+            <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider hidden sm:inline-block">
+              {groupRankData.presentationCount} Presentation{groupRankData.presentationCount === 1 ? '' : 's'} Evaluated
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Tasks Grid */}
       <div className="portal-card">

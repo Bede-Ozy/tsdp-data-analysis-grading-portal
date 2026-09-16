@@ -6,7 +6,8 @@ import {
   getActiveAssignments,
   getPendingModuleProjects,
   getPendingSocialPosts,
-  approveSocialMediaPost
+  approveSocialMediaPost,
+  getGroupLeaderboard
 } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
 import { CardSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
@@ -33,7 +34,8 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Trophy
 } from 'lucide-react';
 
 export default function CoachDashboard() {
@@ -49,6 +51,7 @@ export default function CoachDashboard() {
   const [postNotice, setPostNotice] = useState(null);
   const [activeAssignmentsCount, setActiveAssignmentsCount] = useState(0);
   const [showBelow70Only, setShowBelow70Only] = useState(false);
+  const [groupLeaderboard, setGroupLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -124,11 +127,12 @@ export default function CoachDashboard() {
     async function loadData() {
       setLoading(true);
       try {
-        const [dashRes, asgnRes, modProjectsRes, socialPostsRes] = await Promise.all([
+        const [dashRes, asgnRes, modProjectsRes, socialPostsRes, leaderboardRes] = await Promise.all([
           getCoachDashboard(),
           getActiveAssignments().catch(() => null),
           getPendingModuleProjects().catch(() => null),
-          getPendingSocialPosts().catch(() => null)
+          getPendingSocialPosts().catch(() => null),
+          getGroupLeaderboard().catch(() => null)
         ]);
 
         if (dashRes && dashRes.success !== false) {
@@ -194,6 +198,24 @@ export default function CoachDashboard() {
           const list = Array.isArray(modProjectsRes) ? modProjectsRes : (modProjectsRes.data || []);
           setPendingModuleProjects(list);
         }
+
+        // Process Group Leaderboard from Backend
+        let board = [];
+        if (leaderboardRes && leaderboardRes.success !== false) {
+          const raw = Array.isArray(leaderboardRes)
+            ? leaderboardRes
+            : (leaderboardRes.data?.leaderboard || leaderboardRes.leaderboard || leaderboardRes.data || leaderboardRes.groups || []);
+          if (Array.isArray(raw) && raw.length > 0) {
+            board = raw.map((item, idx) => ({
+              rank: item.rank || idx + 1,
+              group: item.group || item.groupName || item.className || item.classGroup || item.team || `Group ${idx + 1}`,
+              average: item.average ?? item.averageScore ?? item.avgScore ?? item.avg ?? 0,
+              total: item.total ?? item.totalScore ?? item.points ?? item.totalPoints ?? 0,
+              presentations: item.presentations ?? item.presentationCount ?? item.count ?? item.totalPresentations ?? 0
+            }));
+          }
+        }
+        setGroupLeaderboard(board);
       } catch (err) {
         console.error('Error loading coach dashboard:', err);
       } finally {
@@ -683,6 +705,85 @@ export default function CoachDashboard() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Group Leaderboard Card */}
+          <div className="portal-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <span className="text-lg">🏆</span>
+                  <span>Group Leaderboard</span>
+                </h2>
+                <p className="text-xs text-brand-neutral-muted mt-0.5">
+                  Cohort class group presentation rankings, total points, and averages (10% program weight)
+                </p>
+              </div>
+              <Link
+                to="/coach/grade-presentations"
+                className="btn-secondary text-xs self-start sm:self-auto flex items-center gap-1.5"
+              >
+                <span>Grade Presentations Console</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {groupLeaderboard.length === 0 ? (
+              <div className="py-8 px-4 text-center rounded-xl bg-slate-50/50 border border-dashed border-slate-200 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center mx-auto shadow-inner">
+                  <Users className="w-5 h-5 text-cyan-600" />
+                </div>
+                <p className="text-xs font-semibold text-slate-700">No Group Presentations Evaluated Yet</p>
+                <p className="text-[11px] text-brand-neutral-muted max-w-md mx-auto">
+                  When you evaluate cohort presentations in the console, class groups will be ranked here by their average and total scores.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200/80 text-slate-400 uppercase font-semibold">
+                      <th className="py-2.5 px-3 text-center w-20">Rank</th>
+                      <th className="py-2.5 px-3">Group</th>
+                      <th className="py-2.5 px-3 text-center">Average</th>
+                      <th className="py-2.5 px-3 text-center">Total</th>
+                      <th className="py-2.5 px-3 text-center">Presentations</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {groupLeaderboard.map((item, idx) => {
+                      const rank = item.rank || idx + 1;
+                      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+
+                      return (
+                        <tr key={item.group || idx} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-3 text-center font-bold">
+                            <span className="inline-flex items-center justify-center gap-1 font-mono text-slate-700">
+                              {medal && <span className="text-sm">{medal}</span>}
+                              <span>{rank}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-slate-800 text-sm">{item.group}</span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-flex px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-brand-primary border border-blue-200/80">
+                              {typeof item.average === 'number' ? `${item.average}%` : item.average}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-bold text-slate-700">
+                            {item.total}
+                          </td>
+                          <td className="py-3 px-3 text-center font-semibold text-slate-600">
+                            {item.presentations}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

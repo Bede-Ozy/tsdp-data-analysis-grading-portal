@@ -199,6 +199,18 @@ export const gradeCapstoneSprint = (capstoneGroupID, sprintNumber, presentationS
 export const gradeGroupPresentation = (weekNumber, dayNumber, group, topic, readinessScore, slideQualityScore, presentationQualityScore, answersScore, feedback, coachID) => 
   callApi('gradeGroupPresentation', [weekNumber, dayNumber, group, topic, readinessScore, slideQualityScore, presentationQualityScore, answersScore, feedback, coachID]);
 
+export const gradeGroupPresentationV2 = (weekNumber, dayNumber, group, topic, readinessScore, slideQualityScore, presentationQualityScore, answersScore, presentMembers, feedback, coachID) => 
+  callApi('gradeGroupPresentationV2', [weekNumber, dayNumber, group, topic, readinessScore, slideQualityScore, presentationQualityScore, answersScore, presentMembers, feedback, coachID]);
+
+export const getGroupMembers = (groupName) => 
+  callApi('getGroupMembers', [groupName]);
+
+export const getGroupLeaderboard = () => 
+  callApi('getGroupLeaderboard', []);
+
+export const getStudentGroupRank = (studentID) => 
+  callApi('getStudentGroupRank', [studentID]);
+
 export const recordIndividualPresentation = (presentationID, studentID, questionAsked, responseScore, comments, coachID) => 
   callApi('recordIndividualPresentation', [presentationID, studentID, questionAsked, responseScore, comments, coachID]);
 
