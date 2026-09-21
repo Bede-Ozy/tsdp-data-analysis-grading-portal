@@ -633,17 +633,30 @@ export default function CoachDashboard() {
                           </div>
                         )}
 
-                        <div className="pt-1">
-                          <a
-                            href={post.postUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline bg-blue-50/70 hover:bg-blue-100/70 px-2.5 py-1 rounded-lg border border-blue-200/70 transition-colors"
-                          >
-                            <span>Open & Inspect Post ({post.platform})</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                        {(() => {
+                          const rawUrl = post.postUrl || post.url || post.link || post.postURL || post.submissionUrl || '';
+                          const cleanUrl = rawUrl && !rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')
+                            ? `https://${rawUrl}`
+                            : rawUrl;
+
+                          return cleanUrl ? (
+                            <div className="pt-1">
+                              <a
+                                href={cleanUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline bg-blue-50/70 hover:bg-blue-100/70 px-2.5 py-1 rounded-lg border border-blue-200/70 transition-colors"
+                              >
+                                <span>Open & Inspect Post ({post.platform})</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="pt-1 text-xs text-slate-400 italic">
+                              (No post URL provided)
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Right: Review & Approval Controls */}
