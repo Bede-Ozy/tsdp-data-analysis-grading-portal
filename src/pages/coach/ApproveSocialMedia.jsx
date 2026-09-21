@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getPendingSocialPosts, approveSocialMediaPost } from '../../services/api';
+import { getPendingSocialPosts, approveSocialMediaPost, rejectSocialMediaPost } from '../../services/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { Share2, CheckCircle2, XCircle, ExternalLink, AlertCircle } from 'lucide-react';
 
@@ -60,7 +60,9 @@ export default function ApproveSocialMedia() {
     setActionInProgress(post.postID);
     try {
       const coachID = user?.coachID || user?.id || '';
-      const res = await approveSocialMediaPost(post.postID, Number(scoreVal), feedbackVal, coachID);
+      const res = isApproved
+        ? await approveSocialMediaPost(post.postID, Number(scoreVal), feedbackVal, coachID)
+        : await rejectSocialMediaPost(post.postID, feedbackVal, coachID);
 
       // Update local storage cache if post was queued locally
       try {

@@ -19,9 +19,7 @@ import {
   Filter,
   User,
   Calendar,
-  Send,
-  Sparkles,
-  Edit3
+  Sparkles
 } from 'lucide-react';
 
 export default function GradeAssignments() {
@@ -31,7 +29,7 @@ export default function GradeAssignments() {
   // Submissions State
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('roster'); // 'roster' | 'queue' | 'direct'
+  const [activeTab, setActiveTab] = useState('roster'); // 'roster' | 'queue'
   const [filterType, setFilterType] = useState('All'); // 'All' | 'Technical' | 'Professional'
   const [rosterFilter, setRosterFilter] = useState('All'); // 'All' | 'Submitted' | 'Ungraded'
   const [search, setSearch] = useState('');
@@ -40,17 +38,8 @@ export default function GradeAssignments() {
   const [message, setMessage] = useState(null);
   const [selectedSubmissionModal, setSelectedSubmissionModal] = useState(null);
 
-  // Direct Scoring State
+  // Student Roster State
   const [students, setStudents] = useState([]);
-  const [directStudentNum, setDirectStudentNum] = useState('');
-  const [directType, setDirectType] = useState('Technical');
-  const [directTool, setDirectTool] = useState('Excel');
-  const [directWeek, setDirectWeek] = useState(6);
-  const [directDay, setDirectDay] = useState(1);
-  const [directTitle, setDirectTitle] = useState('');
-  const [directScore, setDirectScore] = useState('');
-  const [directFeedback, setDirectFeedback] = useState('');
-  const [directSaving, setDirectSaving] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -78,9 +67,6 @@ export default function GradeAssignments() {
         if (studentsRes && studentsRes.success !== false) {
           const stdList = Array.isArray(studentsRes) ? studentsRes : (studentsRes.data || studentsRes.students || []);
           setStudents(stdList);
-          if (stdList.length > 0 && !directStudentNum) {
-            setDirectStudentNum(stdList[0].studentNumber || stdList[0].studentID);
-          }
         }
       } catch (err) {
         console.error('Error loading submissions data:', err);
@@ -144,51 +130,7 @@ export default function GradeAssignments() {
     }
   };
 
-  // Direct Scoring Submit
-  const handleDirectGradeSubmit = async (e) => {
-    e.preventDefault();
-    setMessage(null);
 
-    if (!directStudentNum) {
-      alert('Please select a student.');
-      return;
-    }
-    if (directScore === '' || directScore === undefined) {
-      alert('Please enter a score between 0 and 10.');
-      return;
-    }
-    if (!directTitle.trim()) {
-      alert('Please provide an assignment title.');
-      return;
-    }
-
-    setDirectSaving(true);
-    try {
-      const subID = `DIRECT-${Date.now()}`;
-      let res;
-      if (directType === 'Technical') {
-        res = await gradeTechnicalSubmission(subID, Number(directScore), directFeedback, coachID);
-      } else {
-        res = await gradeProfessionalSubmission(subID, Number(directScore), directFeedback, coachID);
-      }
-
-      if (res && res.success !== false) {
-        setMessage({
-          type: 'success',
-          text: `Direct score recorded: ${directScore}/10 for Resident ${directStudentNum} on "${directTitle}"`
-        });
-        setDirectTitle('');
-        setDirectScore('');
-        setDirectFeedback('');
-      } else {
-        setMessage({ type: 'error', text: res?.message || 'Failed to submit direct grade.' });
-      }
-    } catch (err) {
-      setMessage({ type: 'error', text: 'Error recording direct grade.' });
-    } finally {
-      setDirectSaving(false);
-    }
-  };
 
   if (loading) {
     return <LoadingSpinner size="lg" text="Loading assignment submissions & resident roster..." />;
@@ -273,17 +215,7 @@ export default function GradeAssignments() {
           >
             Submissions Queue ({submissions.length})
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('direct')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'direct'
-                ? 'bg-white text-brand-primary shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Direct Resident Scoring
-          </button>
+
         </div>
       </div>
 
@@ -720,152 +652,7 @@ export default function GradeAssignments() {
         </div>
       )}
 
-      {/* TAB 2: DIRECT RESIDENT SCORING */}
-      {activeTab === 'direct' && (
-        <div className="portal-card max-w-2xl mx-auto space-y-5">
-          <div className="border-b border-slate-100 pb-3">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Edit3 className="w-4 h-4 text-brand-primary" />
-              <span>Direct Assignment Scoring (Offline / In-Class)</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Award grades to residents who presented in class, completed drills offline, or submitted via alternate channels.
-            </p>
-          </div>
 
-          <form onSubmit={handleDirectGradeSubmit} className="space-y-4 text-xs">
-            {/* Resident Selector */}
-            <div>
-              <label className="form-label">Select Resident Student *</label>
-              <CustomSelect
-                value={directStudentNum}
-                onChange={(val) => setDirectStudentNum(val)}
-                searchable={true}
-                placeholder="Search resident student..."
-                options={students.map((st) => ({
-                  value: st.studentNumber || st.studentID,
-                  label: `${st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim() || st.studentID} (${st.studentID || `#${st.studentNumber}`})`,
-                  sublabel: st.classGroup ? `Group: ${st.classGroup}` : null
-                }))}
-              />
-            </div>
-
-            {/* Category & Tool */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="form-label">Category</label>
-                <CustomSelect
-                  value={directType}
-                  onChange={(val) => setDirectType(val)}
-                  options={[
-                    { value: 'Technical', label: 'Technical' },
-                    { value: 'Professional', label: 'Professional' }
-                  ]}
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Tool / Domain</label>
-                <CustomSelect
-                  value={directTool}
-                  onChange={(val) => setDirectTool(val)}
-                  options={[
-                    ...TOOLS_LIST.map((t) => ({ value: t, label: t })),
-                    { value: 'SoftSkills', label: 'SoftSkills' }
-                  ]}
-                />
-              </div>
-            </div>
-
-            {/* Week & Day */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="form-label">Week (1–16)</label>
-                <CustomSelect
-                  value={directWeek}
-                  onChange={(val) => setDirectWeek(Number(val))}
-                  options={Array.from({ length: 16 }, (_, i) => ({
-                    value: i + 1,
-                    label: `Week ${i + 1}`
-                  }))}
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Day (1–5)</label>
-                <CustomSelect
-                  value={directDay}
-                  onChange={(val) => setDirectDay(Number(val))}
-                  options={[1, 2, 3, 4, 5].map(d => ({
-                    value: d,
-                    label: `Day ${d}`
-                  }))}
-                />
-              </div>
-            </div>
-
-            {/* Assignment Title */}
-            <div>
-              <label className="form-label">Assignment Title *</label>
-              <input
-                type="text"
-                value={directTitle}
-                onChange={(e) => setDirectTitle(e.target.value)}
-                placeholder="e.g. Week 6 Day 1 SQL Analytical Queries"
-                className="form-input text-xs"
-                required
-              />
-            </div>
-
-            {/* Score & Feedback */}
-            <div>
-              <label className="form-label">Score (0 to 10 points) *</label>
-              <input
-                type="number"
-                min="0"
-                max="10"
-                step="0.5"
-                value={directScore}
-                onChange={(e) => setDirectScore(e.target.value)}
-                placeholder="e.g. 9"
-                className="form-input text-xs font-bold"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="form-label">Coach Feedback</label>
-              <textarea
-                rows={2}
-                value={directFeedback}
-                onChange={(e) => setDirectFeedback(e.target.value)}
-                placeholder="Qualitative notes on accuracy, efficiency, and methodology..."
-                className="form-input text-xs"
-              />
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={directSaving}
-                className="btn-primary px-6 py-2.5 text-xs font-bold flex items-center gap-2 shadow-sm disabled:opacity-50"
-              >
-                {directSaving ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Recording Score...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Submit Resident Score</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* ================= MODAL: MULTIPLE ASSIGNMENT SUBMISSIONS ================= */}
       {selectedSubmissionModal && (

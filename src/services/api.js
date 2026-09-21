@@ -220,6 +220,9 @@ export const recordSoftSkillsEvaluation = (studentID, weekNumber, communicationS
 export const approveSocialMediaPost = (postID, score, feedback, coachID) => 
   callApi('approveSocialMediaPost', [postID, score, feedback, coachID]);
 
+export const rejectSocialMediaPost = (postID, reason, coachID) =>
+  callApi('rejectSocialMediaPost', [postID, reason, coachID]);
+
 // Supplementary helpers
 export const submitSocialMediaPost = (studentNumber, platform, postUrl, topic, caption = '') =>
   callApi('submitSocialMediaPost', [studentNumber, platform, postUrl, topic, caption]);

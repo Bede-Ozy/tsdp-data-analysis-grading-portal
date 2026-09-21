@@ -7,6 +7,7 @@ import {
   getPendingModuleProjects,
   getPendingSocialPosts,
   approveSocialMediaPost,
+  rejectSocialMediaPost,
   getGroupLeaderboard
 } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
@@ -83,7 +84,9 @@ export default function CoachDashboard() {
     setPostActionInProgress(post.postID);
     try {
       const coachID = user?.coachID || user?.id || '';
-      const res = await approveSocialMediaPost(post.postID, Number(scoreVal), feedbackVal, coachID);
+      const res = isApproved
+        ? await approveSocialMediaPost(post.postID, Number(scoreVal), feedbackVal, coachID)
+        : await rejectSocialMediaPost(post.postID, feedbackVal, coachID);
 
       // Sync with localStorage
       try {
