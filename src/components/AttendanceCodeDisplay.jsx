@@ -6,6 +6,7 @@ export default function AttendanceCodeDisplay({
   weekNumber,
   dayNumber,
   sessionType,
+  sessionPeriod,
   expiresInMinutes = 10,
   onRegenerate
 }) {
@@ -44,7 +45,7 @@ export default function AttendanceCodeDisplay({
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary text-white text-xs font-semibold tracking-wide uppercase">
           <span>Week {weekNumber} · Day {dayNumber}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
-          <span>{sessionType} Session</span>
+          <span>{sessionPeriod ? `${sessionPeriod} · ` : ''}{sessionType} Session</span>
         </div>
 
         {/* Big Code Box */}

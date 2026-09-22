@@ -25,8 +25,10 @@ export default function CreateAssignment() {
   const coachID = user?.coachID || user?.id || user?.studentID || user?.name || 'COACH';
 
   // Form State
-  const [type, setType] = useState('Assignment'); // 'Assignment' | 'ModuleProject'
+  const [type, setType] = useState('Assignment'); // 'Assignment' | 'ModuleProject' | 'SocialMedia'
   const [category, setCategory] = useState('Technical'); // 'Technical' | 'Professional'
+  const [platform, setPlatform] = useState('LinkedIn'); // for SocialMedia: 'LinkedIn' | 'Twitter' | 'Instagram' | 'Facebook' | 'Any'
+  const [postsRequired, setPostsRequired] = useState(1);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deliverables, setDeliverables] = useState('');
@@ -87,14 +89,17 @@ export default function CreateAssignment() {
         materialsArray = await filesToBase64Array(materialsFiles);
       }
 
-      const activeTool = category === 'Technical' ? tool : 'SoftSkills';
-      const activeWeek = type === 'Assignment' ? Number(weekNumber) : null;
-      const activeDay = type === 'Assignment' ? Number(dayNumber) : null;
+      const activeTool = type === 'SocialMedia' ? platform : (category === 'Technical' ? tool : 'SoftSkills');
+      const activeCategory = type === 'SocialMedia' ? 'Professional' : category;
+      const activeWeek = type === 'Assignment' || type === 'SocialMedia' ? Number(weekNumber) : null;
+      const activeDay = type === 'Assignment' || type === 'SocialMedia' ? Number(dayNumber) : null;
       const activeMonth = type === 'ModuleProject' ? Number(monthNumber) : null;
+      const activeAllowedFileTypes = type === 'SocialMedia' ? '' : allowedFileTypes.trim();
+      const activeMaxFiles = type === 'SocialMedia' ? (Number(postsRequired) || 1) : (Number(maxFilesAllowed) || 1);
 
       const res = await createAssignment(
         type,
-        category,
+        activeCategory,
         title.trim(),
         description.trim(),
         deliverables.trim(),
@@ -103,8 +108,8 @@ export default function CreateAssignment() {
         activeDay,
         activeMonth,
         Number(maxScore) || 10,
-        allowedFileTypes.trim(),
-        Number(maxFilesAllowed) || 1,
+        activeAllowedFileTypes,
+        activeMaxFiles,
         dueDate,
         notes.trim(),
         materialsArray,
@@ -299,28 +304,86 @@ export default function CreateAssignment() {
                 onChange={(val) => setType(val)}
                 options={[
                   { value: 'Assignment', label: 'Daily / Weekly Assignment' },
-                  { value: 'ModuleProject', label: 'Monthly Module Project' }
+                  { value: 'ModuleProject', label: 'Monthly Module Project' },
+                  { value: 'SocialMedia', label: 'Social Media Learning Post' }
                 ]}
               />
             </div>
 
-            {/* Category */}
-            <div>
-              <label className="form-label">Curriculum Category</label>
-              <CustomSelect
-                value={category}
-                onChange={(val) => setCategory(val)}
-                options={[
-                  { value: 'Technical', label: 'Technical (Excel, SQL, PowerBI, Python)' },
-                  { value: 'Professional', label: 'Professional (Soft Skills, Presentation, Report)' }
-                ]}
-              />
-            </div>
+            {/* Category / Platform */}
+            {type === 'SocialMedia' ? (
+              <div>
+                <label className="form-label">Target Social Platform</label>
+                <CustomSelect
+                  value={platform}
+                  onChange={(val) => setPlatform(val)}
+                  options={[
+                    { value: 'LinkedIn', label: 'LinkedIn' },
+                    { value: 'Twitter', label: 'Twitter / X' },
+                    { value: 'Instagram', label: 'Instagram' },
+                    { value: 'Facebook', label: 'Facebook' },
+                    { value: 'Any', label: 'Any Platform' }
+                  ]}
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="form-label">Curriculum Category</label>
+                <CustomSelect
+                  value={category}
+                  onChange={(val) => setCategory(val)}
+                  options={[
+                    { value: 'Technical', label: 'Technical (Excel, SQL, PowerBI, Python)' },
+                    { value: 'Professional', label: 'Professional (Soft Skills, Presentation, Report)' }
+                  ]}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Dynamic Timing Fields */}
+          {/* Dynamic Timing & Scope Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
-            {type === 'Assignment' ? (
+            {type === 'SocialMedia' ? (
+              <>
+                <div>
+                  <label className="form-label">Week Number (1–16)</label>
+                  <CustomSelect
+                    value={weekNumber}
+                    onChange={(val) => setWeekNumber(Number(val))}
+                    options={Array.from({ length: 16 }, (_, i) => ({
+                      value: i + 1,
+                      label: `Week ${i + 1}`
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Class Day (1–5)</label>
+                  <CustomSelect
+                    value={dayNumber}
+                    onChange={(val) => setDayNumber(Number(val))}
+                    options={[1, 2, 3, 4, 5].map(d => ({
+                      value: d,
+                      label: `Day ${d}`
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Posts Required *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={postsRequired}
+                    onChange={(e) => setPostsRequired(Math.max(1, Number(e.target.value)))}
+                    className="form-input"
+                    required
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">Number of required approved posts (default: 1)</p>
+                </div>
+              </>
+            ) : type === 'Assignment' ? (
               <>
                 <div>
                   <label className="form-label">Week Number (1–16)</label>
@@ -345,33 +408,47 @@ export default function CreateAssignment() {
                     }))}
                   />
                 </div>
+
+                {category === 'Technical' && (
+                  <div>
+                    <label className="form-label">Analytics Tool</label>
+                    <CustomSelect
+                      value={tool}
+                      onChange={(val) => setTool(val)}
+                      options={[
+                        ...TOOLS_LIST.map(t => ({ value: t, label: t })),
+                        { value: 'SoftSkills', label: 'SoftSkills' }
+                      ]}
+                    />
+                  </div>
+                )}
               </>
             ) : (
-              <div>
-                <label className="form-label">Month Number (1–4)</label>
-                <CustomSelect
-                  value={monthNumber}
-                  onChange={(val) => setMonthNumber(Number(val))}
-                  options={[1, 2, 3, 4].map(m => ({
-                    value: m,
-                    label: `Month ${m}`
-                  }))}
-                />
-              </div>
-            )}
+              <>
+                <div>
+                  <label className="form-label">Month Number (1–4)</label>
+                  <CustomSelect
+                    value={monthNumber}
+                    onChange={(val) => setMonthNumber(Number(val))}
+                    options={[1, 2, 3, 4].map(m => ({
+                      value: m,
+                      label: `Month ${m}`
+                    }))}
+                  />
+                </div>
 
-            {category === 'Technical' && (
-              <div>
-                <label className="form-label">Analytics Tool</label>
-                <CustomSelect
-                  value={tool}
-                  onChange={(val) => setTool(val)}
-                  options={[
-                    ...TOOLS_LIST.map(t => ({ value: t, label: t })),
-                    { value: 'SoftSkills', label: 'SoftSkills' }
-                  ]}
-                />
-              </div>
+                <div>
+                  <label className="form-label">Analytics Tool</label>
+                  <CustomSelect
+                    value={tool}
+                    onChange={(val) => setTool(val)}
+                    options={[
+                      ...TOOLS_LIST.map(t => ({ value: t, label: t })),
+                      { value: 'SoftSkills', label: 'SoftSkills' }
+                    ]}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -386,7 +463,7 @@ export default function CreateAssignment() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Sales Funnel Pivot Table & Customer Cohort Analysis"
+              placeholder={type === 'SocialMedia' ? 'e.g. Week 6 SQL Group By & Having Reflection Post' : 'e.g. Sales Funnel Pivot Table & Customer Cohort Analysis'}
               className="form-input"
               required
             />
@@ -398,7 +475,7 @@ export default function CreateAssignment() {
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Explain the background scenario, problem statement, and requirements..."
+              placeholder={type === 'SocialMedia' ? 'Explain what residents should write about in their public post (hashtags, concepts, screenshots)...' : 'Explain the background scenario, problem statement, and requirements...'}
               className="form-input resize-y"
             />
           </div>
@@ -409,7 +486,7 @@ export default function CreateAssignment() {
               rows={3}
               value={deliverables}
               onChange={(e) => setDeliverables(e.target.value)}
-              placeholder="e.g. 1. Cleaned Excel workbook (.xlsx), 2. Brief executive summary slides (.pdf)"
+              placeholder={type === 'SocialMedia' ? 'e.g. Public post URL on LinkedIn with hashtag #TSDP2026 and code snippet' : 'e.g. 1. Cleaned Excel workbook (.xlsx), 2. Brief executive summary slides (.pdf)'}
               className="form-input resize-y"
             />
           </div>
@@ -447,31 +524,42 @@ export default function CreateAssignment() {
               />
             </div>
 
-            <div>
-              <label className="form-label">Max Files Allowed</label>
-              <CustomSelect
-                value={maxFilesAllowed}
-                onChange={(val) => setMaxFilesAllowed(Number(val))}
-                options={[1, 2, 3, 4, 5].map(n => ({
-                  value: n,
-                  label: `${n} ${n === 1 ? 'file' : 'files'}`
-                }))}
-              />
-            </div>
+            {type === 'SocialMedia' ? (
+              <div>
+                <label className="form-label">Submission Mode</label>
+                <div className="p-2.5 bg-purple-50 border border-purple-200/80 rounded-xl text-xs text-purple-800 font-medium">
+                  Public URL Link ({postsRequired} {postsRequired === 1 ? 'post' : 'posts'} required)
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="form-label">Max Files Allowed</label>
+                <CustomSelect
+                  value={maxFilesAllowed}
+                  onChange={(val) => setMaxFilesAllowed(Number(val))}
+                  options={[1, 2, 3, 4, 5].map(n => ({
+                    value: n,
+                    label: `${n} ${n === 1 ? 'file' : 'files'}`
+                  }))}
+                />
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-            <div>
-              <label className="form-label">Allowed File Extensions</label>
-              <input
-                type="text"
-                value={allowedFileTypes}
-                onChange={(e) => setAllowedFileTypes(e.target.value)}
-                placeholder=".xlsx, .pdf, .sql, .pbix, .py"
-                className="form-input font-mono text-xs"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">Comma-separated list (e.g. .xlsx,.pdf,.sql)</p>
-            </div>
+          <div className={`grid grid-cols-1 ${type === 'SocialMedia' ? 'sm:grid-cols-1' : 'sm:grid-cols-2'} gap-4 pt-2 border-t border-slate-100`}>
+            {type !== 'SocialMedia' && (
+              <div>
+                <label className="form-label">Allowed File Extensions</label>
+                <input
+                  type="text"
+                  value={allowedFileTypes}
+                  onChange={(e) => setAllowedFileTypes(e.target.value)}
+                  placeholder=".xlsx, .pdf, .sql, .pbix, .py"
+                  className="form-input font-mono text-xs"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Comma-separated list (e.g. .xlsx,.pdf,.sql)</p>
+              </div>
+            )}
 
             <div>
               <label className="form-label">Coach Notes / Assessment Hints (Optional)</label>

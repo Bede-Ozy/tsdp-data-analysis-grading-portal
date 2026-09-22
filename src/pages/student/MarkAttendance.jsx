@@ -9,6 +9,7 @@ import { Clock, CheckCircle2, AlertCircle, Sparkles, HelpCircle, X, ArrowRight }
 export default function MarkAttendance() {
   const { user } = useAuth();
   const [sessionType, setSessionType] = useState('Physical');
+  const [sessionPeriod, setSessionPeriod] = useState('Morning'); // 'Morning' | 'Afternoon'
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -36,9 +37,12 @@ export default function MarkAttendance() {
     setLoading(true);
     try {
       const studentNum = user?.studentNumber || user?.studentID || '';
-      const res = await markAttendance(studentNum, sessionType, cleanCode);
+      const res = await markAttendance(studentNum, sessionType, cleanCode, sessionPeriod);
       if (res && res.success) {
-        setResult(res);
+        setResult({
+          ...res,
+          sessionPeriod
+        });
         setShowSuccessModal(true);
         setCode('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -60,7 +64,7 @@ export default function MarkAttendance() {
         <div>
           <h1 className="text-2xl font-bold text-brand-neutral">Mark Class Attendance</h1>
           <p className="text-sm text-brand-neutral-muted mt-1">
-            Enter the daily 6-character session passcode announced by your coach.
+            Enter the daily 6-character session passcode announced by your coach for morning or afternoon classes.
           </p>
         </div>
         <Link
@@ -89,8 +93,8 @@ export default function MarkAttendance() {
             )}
             <span>
               {String(result.status || '').toLowerCase() === 'late'
-                ? 'Attendance Recorded as Late'
-                : 'Attendance Successfully Recorded!'}
+                ? `Attendance Recorded as Late (${result.sessionPeriod || sessionPeriod})`
+                : `Attendance Successfully Recorded (${result.sessionPeriod || sessionPeriod})!`}
             </span>
           </div>
           <p className="text-xs font-medium">
@@ -115,6 +119,7 @@ export default function MarkAttendance() {
                 {result.status || 'Present'}
               </strong>
             </span>
+            <span>Period: <strong>{result.sessionPeriod || sessionPeriod}</strong></span>
             {result.timestamp && <span>Recorded at: {result.timestamp}</span>}
           </div>
         </div>
@@ -142,17 +147,31 @@ export default function MarkAttendance() {
             </span>
           </div>
 
-          {/* Session Type */}
-          <div>
-            <label className="form-label">Select Session Type</label>
-            <CustomSelect
-              value={sessionType}
-              onChange={(val) => setSessionType(val)}
-              options={SESSION_TYPES.map((type) => ({
-                value: type,
-                label: `${type} Session`
-              }))}
-            />
+          {/* Session Mode & Period Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Session Mode</label>
+              <CustomSelect
+                value={sessionType}
+                onChange={(val) => setSessionType(val)}
+                options={SESSION_TYPES.map((type) => ({
+                  value: type,
+                  label: `${type} Session`
+                }))}
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Session Period</label>
+              <CustomSelect
+                value={sessionPeriod}
+                onChange={(val) => setSessionPeriod(val)}
+                options={[
+                  { value: 'Morning', label: 'Morning Session' },
+                  { value: 'Afternoon', label: 'Afternoon Session' }
+                ]}
+              />
+            </div>
           </div>
 
           {/* 6-digit Code Input */}

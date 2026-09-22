@@ -39,6 +39,7 @@ export default function StudentDashboard() {
   });
   const [complianceData, setComplianceData] = useState(null);
   const [groupRankData, setGroupRankData] = useState(null);
+  const [socialSubmissions, setSocialSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -137,6 +138,28 @@ export default function StudentDashboard() {
           });
         } catch (e) {}
 
+        // Check local storage social media submissions
+        let studentSocialSubs = [];
+        try {
+          const rawSocial = localStorage.getItem('tsdp_social_media_submissions');
+          const localSocial = rawSocial ? JSON.parse(rawSocial) : [];
+          studentSocialSubs = localSocial.filter(s =>
+            s.studentID === studentID ||
+            s.studentNumber === user?.studentNumber ||
+            String(s.studentID).trim().toLowerCase() === String(studentID).trim().toLowerCase() ||
+            String(s.studentNumber).trim().toLowerCase() === String(user?.studentNumber).trim().toLowerCase()
+          );
+        } catch (e) {}
+        setSocialSubmissions(studentSocialSubs);
+
+        const countApprovedSocial = (asgnID) => {
+          if (!asgnID) return 0;
+          return studentSocialSubs.filter(s =>
+            String(s.assignmentID || s.id || '').trim().toLowerCase() === String(asgnID).trim().toLowerCase() &&
+            (s.status === 'Approved' || (s.score !== undefined && Number(s.score) > 0))
+          ).length;
+        };
+
         // Build set of all submitted items to ensure pending/overdue NEVER contain submitted items
         const submittedIdSet = new Set(sList.map(s => String(s.assignmentID || s.id || '').trim().toLowerCase()).filter(Boolean));
         const submittedModSet = new Set(
@@ -145,16 +168,26 @@ export default function StudentDashboard() {
             .map(s => `m${s.monthNumber}_${String(s.tool || '').toLowerCase()}`)
         );
 
-        // Filter out submitted items from pending & overdue
+        // Filter out submitted items from pending & overdue (SocialMedia remains until required posts approved)
         pList = pList.filter(a => {
           const id = String(a.assignmentID || a.id || '').trim().toLowerCase();
           const modKey = `m${a.monthNumber}_${String(a.tool || '').toLowerCase()}`;
+          if (a.type === 'SocialMedia') {
+            const req = Number(a.maxFilesAllowed || a.postsRequired || 1);
+            const approved = countApprovedSocial(a.assignmentID || a.id);
+            return approved < req;
+          }
           return !submittedIdSet.has(id) && !submittedModSet.has(modKey);
         });
 
         oList = oList.filter(a => {
           const id = String(a.assignmentID || a.id || '').trim().toLowerCase();
           const modKey = `m${a.monthNumber}_${String(a.tool || '').toLowerCase()}`;
+          if (a.type === 'SocialMedia') {
+            const req = Number(a.maxFilesAllowed || a.postsRequired || 1);
+            const approved = countApprovedSocial(a.assignmentID || a.id);
+            return approved < req;
+          }
           return !submittedIdSet.has(id) && !submittedModSet.has(modKey);
         });
 
@@ -165,7 +198,15 @@ export default function StudentDashboard() {
             const itemId = String(item.assignmentID || item.id || '').trim().toLowerCase();
             const modKey = `m${item.monthNumber}_${String(item.tool || '').toLowerCase()}`;
             const isClosed = String(item.status || '').toLowerCase() === 'closed' || item.isClosed;
-            const isSubmitted = (itemId && submittedIdSet.has(itemId)) || submittedModSet.has(modKey);
+            const isSocial = item.type === 'SocialMedia';
+            let isSubmitted = false;
+            if (isSocial) {
+              const req = Number(item.maxFilesAllowed || item.postsRequired || 1);
+              const approved = countApprovedSocial(item.assignmentID || item.id);
+              isSubmitted = approved >= req;
+            } else {
+              isSubmitted = (itemId && submittedIdSet.has(itemId)) || submittedModSet.has(modKey);
+            }
             const alreadyInLists = pList.some(p => String(p.assignmentID || p.id || '').trim().toLowerCase() === itemId) ||
                                    oList.some(o => String(o.assignmentID || o.id || '').trim().toLowerCase() === itemId);
 
@@ -362,7 +403,10 @@ export default function StudentDashboard() {
         const totalDue = dueList.length;
         const first = dueList[0];
         const isMod = first.type === 'ModuleProject';
-        const targetUrl = isMod
+        const isSoc = first.type === 'SocialMedia';
+        const targetUrl = isSoc
+          ? `/student/submit-social-media?assignmentID=${first.assignmentID || first.id}`
+          : isMod
           ? `/student/submit-module-project?month=${first.monthNumber || 1}`
           : `/student/submit-assignment?assignmentID=${first.assignmentID || first.id}`;
 
@@ -388,6 +432,11 @@ export default function StudentDashboard() {
                 </div>
                 <p className="text-sm font-bold text-slate-800 mt-0.5">
                   {first.title || first.assignmentTitle}
+                  {isSoc && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
+                      📱 Social Media Post
+                    </span>
+                  )}
                   {isMod && (
                     <span className="ml-2 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">
                       Monthly Module Project
@@ -476,14 +525,25 @@ export default function StudentDashboard() {
                         dueList.map((asgn, idx) => {
                           const asgnID = asgn.assignmentID || asgn.id;
                           const title = asgn.title || asgn.assignmentTitle || 'Class Assignment';
-                          const tool = asgn.tool || (asgn.category === 'Technical' ? 'Excel' : 'SoftSkills');
+                          const tool = asgn.tool || (asgn.type === 'SocialMedia' ? 'LinkedIn' : (asgn.category === 'Technical' ? 'Excel' : 'SoftSkills'));
                           const due = asgn.dueDate ? new Date(asgn.dueDate) : null;
                           const isOverdue = asgn.isOverdue || (due && due < new Date()) || assignmentsState.overdue.some(o => (o.assignmentID || o.id) === asgnID);
                           const isModuleProject = asgn.type === 'ModuleProject';
+                          const isSocialMedia = asgn.type === 'SocialMedia';
 
-                          const submitTarget = isModuleProject
+                          const submitTarget = isSocialMedia
+                            ? `/student/submit-social-media?assignmentID=${asgnID}`
+                            : isModuleProject
                             ? `/student/submit-module-project?month=${asgn.monthNumber || 1}`
                             : `/student/submit-assignment?assignmentID=${asgnID}`;
+
+                          const postsRequired = Number(asgn.maxFilesAllowed || asgn.postsRequired || 1);
+                          const approvedPostsCount = isSocialMedia
+                            ? socialSubmissions.filter(s =>
+                                String(s.assignmentID || s.id || '').trim().toLowerCase() === String(asgnID).trim().toLowerCase() &&
+                                (s.status === 'Approved' || (s.score !== undefined && Number(s.score) > 0))
+                              ).length
+                            : 0;
 
                           return (
                             <div
@@ -496,7 +556,11 @@ export default function StudentDashboard() {
                             >
                               <div className="overflow-hidden space-y-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  {isModuleProject ? (
+                                  {isSocialMedia ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
+                                      📱 Social Media {asgn.weekNumber ? `(W${asgn.weekNumber})` : ''}
+                                    </span>
+                                  ) : isModuleProject ? (
                                     <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
                                       📁 Module Project {asgn.monthNumber ? `(Month ${asgn.monthNumber})` : ''}
                                     </span>
@@ -512,7 +576,13 @@ export default function StudentDashboard() {
                                     {tool}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-2 text-[11px]">
+                                <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                  {isSocialMedia && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-purple-50 text-purple-700 border-purple-200">
+                                      <Share2 className="w-3 h-3" />
+                                      <span>{approvedPostsCount}/{postsRequired} posts approved</span>
+                                    </span>
+                                  )}
                                   {isOverdue ? (
                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border bg-red-50 text-red-700 border-red-200">
                                       <Clock className="w-3 h-3" />
@@ -533,9 +603,13 @@ export default function StudentDashboard() {
                               </div>
 
                               {isOverdue ? (
-                                <span className="px-2.5 py-1 text-[11px] font-semibold text-red-700 bg-red-100/80 rounded-lg flex-shrink-0 border border-red-200">
-                                  Overdue
-                                </span>
+                                <Link
+                                  to={submitTarget}
+                                  className="px-2.5 py-1 text-[11px] font-semibold text-red-700 bg-red-100/80 hover:bg-red-200/80 rounded-lg flex-shrink-0 border border-red-200 flex items-center gap-1 transition-colors"
+                                >
+                                  <span>Submit Late</span>
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </Link>
                               ) : (
                                 <Link
                                   to={submitTarget}

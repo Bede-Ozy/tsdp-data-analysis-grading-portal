@@ -325,9 +325,16 @@ export default function ApproveSocialMedia() {
                       )}
                     </div>
 
-                    <p className="text-sm font-semibold text-slate-800">
-                      Topic: <span className="font-normal text-slate-600">{post.topic}</span>
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {post.assignmentID && (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
+                          {post.assignmentID}
+                        </span>
+                      )}
+                      <p className="text-sm font-semibold text-slate-800">
+                        Topic: <span className="font-normal text-slate-600">{post.topic}</span>
+                      </p>
+                    </div>
 
                     {post.caption && (
                       <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200/70 font-normal italic leading-relaxed">

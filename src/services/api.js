@@ -164,11 +164,14 @@ export const getStudentInfo = (studentID) =>
   callApi('getStudentInfo', [studentID]);
 
 // Attendance
-export const generateAttendanceCode = (weekNumber, dayNumber, sessionType) => 
-  callApi('generateAttendanceCode', [weekNumber, dayNumber, sessionType]);
+export const generateAttendanceCode = (weekNumber, dayNumber, sessionType, sessionPeriod = 'Morning') => 
+  callApi('generateAttendanceCode', [weekNumber, dayNumber, sessionType, sessionPeriod]);
 
-export const markAttendance = (studentNumber, sessionType, codeEntered) => 
-  callApi('markAttendance', [studentNumber, sessionType, codeEntered]);
+export const markAttendance = (studentNumber, sessionType, codeEntered, sessionPeriod = 'Morning') => 
+  callApi('markAttendance', [studentNumber, sessionType, codeEntered, sessionPeriod]);
+
+export const markAllPresent = (weekNumber, dayNumber, sessionType, sessionPeriod, coachID) =>
+  callApi('markAllPresent', [weekNumber, dayNumber, sessionType, sessionPeriod, coachID]);
 
 // Submissions
 export const handleTechnicalFileUpload = (studentNumber, assignmentID, weekNumber, dayNumber, tool, assignmentTitle, fileContentBase64, fileName) => 
@@ -224,8 +227,8 @@ export const rejectSocialMediaPost = (postID, reason, coachID) =>
   callApi('rejectSocialMediaPost', [postID, reason, coachID]);
 
 // Supplementary helpers
-export const submitSocialMediaPost = (studentNumber, platform, postUrl, topic, caption = '') =>
-  callApi('submitSocialMediaPost', [studentNumber, platform, postUrl, topic, caption]);
+export const submitSocialMediaPost = (studentNumber, platform, postUrl, topic, caption = '', assignmentID = '') =>
+  callApi('submitSocialMediaPost', [studentNumber, platform, postUrl, topic, caption, assignmentID]);
 
 export const getPendingSubmissions = () => 
   callApi('getPendingSubmissions', []);
