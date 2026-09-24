@@ -35,7 +35,8 @@ export default function FileUploader({
   onFilesSelected,
   multiple = false,
   maxFiles = 5,
-  maxSizeMB = 25,
+  maxSizeMB = 20,
+  maxTotalSizeMB = null,
   acceptedFormats = ".xlsx, .xls, .csv, .sql, .pbix, .py, .ipynb, .pdf, .docx, .zip",
   helperText = "Drag and drop your assignment or project files here, or browse"
 }) {
@@ -58,15 +59,29 @@ export default function FileUploader({
       return;
     }
 
-    // Size validation
+    // Size validation for individual files
     for (const f of files) {
       if (f.size > maxSizeMB * 1024 * 1024) {
-        setError(`File "${f.name}" exceeds the ${maxSizeMB}MB size limit.`);
+        setError(
+          multiple
+            ? `File "${f.name}" is too large. Max ${maxSizeMB} MB per file.`
+            : `File too large. Max ${maxSizeMB} MB.`
+        );
         return;
       }
     }
 
     const updated = multiple ? [...selectedFiles, ...files] : files;
+
+    // Total size validation if specified
+    if (maxTotalSizeMB) {
+      const totalBytes = updated.reduce((sum, f) => sum + f.size, 0);
+      if (totalBytes > maxTotalSizeMB * 1024 * 1024) {
+        setError(`Total upload size exceeds ${maxTotalSizeMB} MB. Please remove some files or compress them.`);
+        return;
+      }
+    }
+
     setSelectedFiles(updated);
     if (onFilesSelected) {
       onFilesSelected(updated);
@@ -95,6 +110,7 @@ export default function FileUploader({
   const removeFile = (index) => {
     const updated = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(updated);
+    setError(null);
     if (onFilesSelected) {
       onFilesSelected(updated);
     }
@@ -140,7 +156,7 @@ export default function FileUploader({
             <p className="text-xs text-brand-neutral-muted mt-1">{helperText}</p>
           </div>
           <p className="text-[11px] text-gray-400">
-            Supported: Excel, SQL, PowerBI, Python, PDF (Max {maxSizeMB}MB {multiple ? `· Up to ${maxFiles} files` : ''})
+            Supported: Excel, SQL, PowerBI, Python, PDF (Max {maxSizeMB} MB {multiple ? `per file · Up to ${maxFiles} files` : ''}{maxTotalSizeMB ? ` · Max ${maxTotalSizeMB} MB total` : ''})
           </p>
         </div>
       </div>
@@ -154,9 +170,17 @@ export default function FileUploader({
 
       {selectedFiles.length > 0 && (
         <div className="space-y-2 pt-1">
-          <p className="text-xs font-semibold text-brand-neutral uppercase tracking-wider">
-            Selected {multiple ? `Files (${selectedFiles.length}/${maxFiles})` : 'File'}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-brand-neutral uppercase tracking-wider">
+              Selected {multiple ? `Files (${selectedFiles.length}/${maxFiles})` : 'File'}
+            </p>
+            {multiple && (
+              <span className="text-xs text-brand-neutral-muted font-medium">
+                Total: {formatFileSize(selectedFiles.reduce((s, f) => s + (f.size || 0), 0))}
+                {maxTotalSizeMB ? ` / max ${maxTotalSizeMB} MB` : ''}
+              </span>
+            )}
+          </div>
           <div className="space-y-1.5">
             {selectedFiles.map((file, idx) => (
               <div

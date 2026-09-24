@@ -229,6 +229,13 @@ export default function SubmitModuleProject() {
       return;
     }
 
+    const totalBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
+    if (totalBytes > 40 * 1024 * 1024) {
+      setError(`Total upload exceeds 40 MB (${(totalBytes / (1024 * 1024)).toFixed(1)} MB selected). Please reduce file sizes or compress files before submitting.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setLoading(true);
     try {
       const filesArray = await filesToBase64Array(files);
@@ -744,15 +751,39 @@ export default function SubmitModuleProject() {
 
             {/* Multi-File Upload Component */}
             <div>
-              <label className="form-label">
-                Attach Project Deliverables (Up to 5 files) <span className="text-brand-error">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="form-label">
+                  Attach Project Deliverables (Up to 5 files, Max 40 MB total) <span className="text-brand-error">*</span>
+                </label>
+                {files.length > 0 && (
+                  <span className={`text-xs font-semibold ${
+                    files.reduce((s, f) => s + (f.size || 0), 0) > 40 * 1024 * 1024
+                      ? 'text-brand-error'
+                      : 'text-purple-700'
+                  }`}>
+                    Total: {(files.reduce((s, f) => s + (f.size || 0), 0) / (1024 * 1024)).toFixed(2)} MB / 40 MB
+                  </span>
+                )}
+              </div>
               <FileUploader
                 multiple={true}
                 maxFiles={5}
-                maxSizeMB={30}
-                onFilesSelected={(selected) => setFiles(selected)}
-                helperText="Upload your workbook, SQL/Python scripts, dashboard (.pbix), slides or PDF summary"
+                maxSizeMB={40}
+                maxTotalSizeMB={40}
+                onFilesSelected={(selected) => {
+                  setError(null);
+                  if (!selected || selected.length === 0) {
+                    setFiles([]);
+                    return;
+                  }
+                  const total = selected.reduce((sum, f) => sum + (f.size || 0), 0);
+                  if (total > 40 * 1024 * 1024) {
+                    setError(`Total upload exceeds 40 MB (${(total / (1024 * 1024)).toFixed(1)} MB selected). Please remove some files or compress them.`);
+                    return;
+                  }
+                  setFiles(selected);
+                }}
+                helperText="Upload your workbook, SQL/Python scripts, dashboard (.pbix), slides or PDF summary (Total max 40 MB)"
               />
             </div>
 

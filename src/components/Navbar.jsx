@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, Menu, X, ShieldCheck, GraduationCap, Award } from 'lucide-react';
+import { LogOut, User, Menu, X, ShieldCheck, GraduationCap, Award, BookOpen } from 'lucide-react';
 
 export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
   const { user, role, logout, isAuthenticated } = useAuth();
@@ -126,7 +126,19 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
           </div>
 
           {/* Right: Role Badge, User Info & Logout */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/guide"
+              className={`py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                location.pathname === '/guide' || location.pathname === '/about'
+                  ? 'bg-blue-50 text-brand-primary font-semibold border border-blue-200'
+                  : 'text-slate-600 hover:text-brand-primary hover:bg-slate-100'
+              }`}
+              title="Platform Operations Guide & Workflow Breakdown"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Platform Guide</span>
+            </Link>
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-200">

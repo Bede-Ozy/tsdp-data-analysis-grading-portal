@@ -48,10 +48,8 @@ export const SOFT_SKILLS_CRITERIA = [
   { key: "emotionalIntelligence", label: "Emotional Intelligence & Feedback", max: 5 },
 ];
 
-export const CAPSTONE_GROUPS = [
-  { id: "CAP-01", name: "Capstone Group 1: Healthcare & Logistics Analytics" },
-  { id: "CAP-02", name: "Capstone Group 2: Fintech & Consumer Intelligence" },
-];
+// Capstone groups are loaded dynamically from Google Sheets via getAllCapstoneGroups()
+export const CAPSTONE_GROUPS = [];
 
 export const PRESENTATION_RUBRICS = [
   { key: "readiness", label: "Group Readiness & Coordination", max: 5 },

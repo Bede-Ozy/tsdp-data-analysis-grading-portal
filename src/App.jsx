@@ -43,6 +43,8 @@ import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
 import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
 
+// Documentation & Guide Page
+import PlatformGuide from './pages/PlatformGuide';
 
 function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
@@ -102,6 +104,8 @@ function AppLayout({ children }) {
             <strong className="text-brand-neutral">ShamzBridge Consult</strong>
           </p>
           <div className="flex items-center gap-3">
+            <Link to="/guide" className="hover:text-brand-primary font-medium text-slate-600 transition-colors">Platform Guide</Link>
+            <span className="text-slate-300">·</span>
             <Link to="/student/login" className="hover:text-brand-primary transition-colors">Resident</Link>
             <span className="text-slate-300">·</span>
             <Link to="/coach/login" className="hover:text-brand-primary transition-colors">Coach</Link>
@@ -142,6 +146,10 @@ export default function App() {
               {/* Root Route */}
               <Route path="/" element={<HomeRedirect />} />
 
+
+            {/* Public Documentation & Workflow Guide Pages */}
+            <Route path="/guide" element={<PlatformGuide />} />
+            <Route path="/about" element={<PlatformGuide />} />
 
             {/* Public Authentication Pages */}
             <Route path="/student/login" element={<StudentLogin />} />

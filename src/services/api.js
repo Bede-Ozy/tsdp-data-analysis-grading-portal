@@ -6,6 +6,11 @@ const API_URL = import.meta.env.PROD
   ? PROXY_URL 
   : (import.meta.env.VITE_API_URL || PROXY_URL);
 
+// Direct Google Apps Script URL (bypasses Vercel proxy for large payloads up to 50 MB)
+const GAS_URL = import.meta.env.VITE_GAS_URL || 
+  (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.includes('script.google.com') ? import.meta.env.VITE_API_URL : null) ||
+  'https://script.google.com/macros/s/AKfycbyY9VbWzeoe0UR_riMeP6-8h6j01EIR3MVbUrKQJ4ZXAg14tZej574rNEmz6mUa0pfI/exec';
+
 // Remove hardcoded fallback - key MUST come from .env
 const API_KEY = import.meta.env.VITE_API_KEY;
 
@@ -30,7 +35,7 @@ export async function callApiCached(functionName, parameters = [], ttl = CACHE_T
   return data;
 }
 
-export async function callApi(functionName, parameters = [], retries = 3) {
+export async function callApi(functionName, parameters = [], maxRetries = 3) {
   const apiKey = (API_KEY || '').trim();
   if (!apiKey) {
     console.error('VITE_API_KEY is missing from .env file');
@@ -48,13 +53,13 @@ export async function callApi(functionName, parameters = [], retries = 3) {
 
   let lastError = null;
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
       const response = await axios.post(API_URL, payload, {
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: 15000
       });
 
       let data = response.data;
@@ -80,11 +85,22 @@ export async function callApi(functionName, parameters = [], retries = 3) {
       const rawData = typeof error.response?.data === 'string' ? error.response.data : '';
       const isHtmlError = rawData.includes('<!DOCTYPE') || rawData.includes('<html') || rawData.includes('unable to open');
       
-      const isColdStart = status === 404 || status === 500 || status === 502 || status === 503 || error.code === 'ECONNABORTED' || isHtmlError || error.message.includes('Google Apps Script temporary HTML error');
+      const isTimeout = error.code === 'ECONNABORTED' ||
+                        error.code === 'ETIMEDOUT' ||
+                        Boolean(error.message && error.message.toLowerCase().includes('timeout'));
+      const isNetworkError = error.code === 'ERR_NETWORK' || (!error.response && Boolean(error.request));
 
-      if (isColdStart && attempt < retries) {
+      const isRetryable = isTimeout ||
+                          isNetworkError ||
+                          isHtmlError ||
+                          Boolean(error.message && error.message.includes('Google Apps Script temporary HTML error')) ||
+                          Boolean(error.message && error.message.includes('Invalid JSON response')) ||
+                          [404, 408, 429, 500, 502, 503, 504].includes(status);
+
+      if (isRetryable && attempt <= maxRetries) {
         const waitTime = Math.pow(2, attempt - 1) * 1000;
-        console.warn(`[Retry ${attempt}/${retries}] ${functionName} failed (status: ${status || 'Network/Parse'}). Retrying in ${waitTime}ms...`);
+        const reason = isTimeout ? 'Timeout (15s)' : (status ? `status: ${status}` : (isNetworkError ? 'Network' : 'Parse/HTML'));
+        console.warn(`[Retry ${attempt}/${maxRetries}] ${functionName} failed (${reason}). Retrying in ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
@@ -114,12 +130,82 @@ export async function callApi(functionName, parameters = [], retries = 3) {
     }
   }
 
+  const finalStatus = lastError?.response?.status;
+  const isFinalTimeout = lastError?.code === 'ECONNABORTED' ||
+                         lastError?.code === 'ETIMEDOUT' ||
+                         Boolean(lastError?.message && lastError?.message.toLowerCase().includes('timeout'));
+
+  let fallbackMessage = 'Request failed';
+  if (finalStatus === 404) {
+    fallbackMessage = 'Backend temporarily unavailable (cold start). Please try again.';
+  } else if (isFinalTimeout) {
+    fallbackMessage = 'Request timed out after 15 seconds. Backend may be cold-starting; please try again.';
+  } else if (lastError?.message) {
+    fallbackMessage = lastError.message;
+  }
+
   return { 
     success: false, 
-    message: lastError?.response?.status === 404 
-      ? 'Backend temporarily unavailable (cold start). Please try again.' 
-      : lastError?.message || 'Request failed'
+    message: fallbackMessage
   };
+}
+
+/**
+ * Direct API Call for Large Payloads (File Uploads)
+ * Routes directly to Google Apps Script Web App, bypassing Vercel serverless proxy
+ * to avoid the 4.5 MB request body limit (status 413 Payload Too Large).
+ * Uses text/plain to avoid CORS preflight (OPTIONS).
+ */
+export async function callApiDirect(functionName, parameters = []) {
+  const rawKey = import.meta.env.VITE_API_KEY || API_KEY || '';
+  const apiKey = rawKey.trim();
+  if (!apiKey) {
+    console.error('VITE_API_KEY is missing from .env file');
+    return {
+      success: false,
+      message: 'API key not configured. Check .env file.'
+    };
+  }
+
+  const payload = {
+    apiKey,
+    function: functionName,
+    parameters: parameters
+  };
+
+  try {
+    // Apps Script requires text/plain to avoid CORS preflight
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow'
+    });
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('unable to open')) {
+        return {
+          success: false,
+          message: 'Google Apps Script temporary service error. Please try again.'
+        };
+      }
+      return {
+        success: false,
+        message: text || 'Invalid response from backend'
+      };
+    }
+    return data;
+  } catch (error) {
+    console.error(`Direct API Error calling '${functionName}':`, error);
+    return {
+      success: false,
+      message: error?.message || 'Direct upload request failed. Please check connection and file size.'
+    };
+  }
 }
 
 // Combined Dashboard Endpoints (Fast 1-Trip Loaders)
@@ -170,18 +256,18 @@ export const generateAttendanceCode = (weekNumber, dayNumber, sessionType, sessi
 export const markAttendance = (studentNumber, sessionType, codeEntered, sessionPeriod = 'Morning') => 
   callApi('markAttendance', [studentNumber, sessionType, codeEntered, sessionPeriod]);
 
-export const markAllPresent = (weekNumber, dayNumber, sessionType, sessionPeriod, coachID) =>
+export const markAllPresent = (weekNumber, dayNumber, sessionType, sessionPeriod, coachID) => 
   callApi('markAllPresent', [weekNumber, dayNumber, sessionType, sessionPeriod, coachID]);
 
-// Submissions
+// Submissions (routed through callApiDirect to bypass Vercel 4.5MB limit for up to 40MB uploads)
 export const handleTechnicalFileUpload = (studentNumber, assignmentID, weekNumber, dayNumber, tool, assignmentTitle, fileContentBase64, fileName) => 
-  callApi('handleTechnicalFileUpload', [studentNumber, assignmentID, weekNumber, dayNumber, tool, assignmentTitle, fileContentBase64, fileName]);
+  callApiDirect('handleTechnicalFileUpload', [studentNumber, assignmentID, weekNumber, dayNumber, tool, assignmentTitle, fileContentBase64, fileName]);
 
 export const handleProfessionalFileUpload = (studentNumber, assignmentID, weekNumber, dayNumber, topic, assignmentTitle, fileContentBase64, fileName) => 
-  callApi('handleProfessionalFileUpload', [studentNumber, assignmentID, weekNumber, dayNumber, topic, assignmentTitle, fileContentBase64, fileName]);
+  callApiDirect('handleProfessionalFileUpload', [studentNumber, assignmentID, weekNumber, dayNumber, topic, assignmentTitle, fileContentBase64, fileName]);
 
 export const handleModuleProjectUpload = (studentNumber, monthNumber, tool, projectTitle, filesArray) => 
-  callApi('handleModuleProjectUpload', [studentNumber, monthNumber, tool, projectTitle, filesArray]);
+  callApiDirect('handleModuleProjectUpload', [studentNumber, monthNumber, tool, projectTitle, filesArray]);
 
 // Grading
 export const gradeTechnicalSubmission = (submissionID, score, feedback, coachID) => 

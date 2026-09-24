@@ -218,6 +218,12 @@ export default function SubmitAssignment() {
       return;
     }
 
+    if (selectedFile.size > 20 * 1024 * 1024) {
+      setError('File too large. Max 20 MB.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (isManualMode && !manualTitle.trim()) {
       setError('Please provide an assignment title.');
       return;
@@ -847,11 +853,21 @@ export default function SubmitAssignment() {
                 Upload Your Solution File <span className="text-brand-error">*</span>
               </label>
               <FileUploader
-                onFilesSelected={(files) => setSelectedFile(files[0] || null)}
+                onFilesSelected={(files) => {
+                  const f = files[0] || null;
+                  if (f && f.size > 20 * 1024 * 1024) {
+                    setError('File too large. Max 20 MB.');
+                    setSelectedFile(null);
+                    return;
+                  }
+                  setError(null);
+                  setSelectedFile(f);
+                }}
                 multiple={false}
                 maxFiles={1}
+                maxSizeMB={20}
                 acceptedFormats={selectedAssignment?.allowedFileTypes || '.xlsx, .pdf, .sql, .pbix, .py, .docx, .zip'}
-                helperText="Upload your completed solution (.xlsx, .sql, .pbix, .py, .pdf, etc.)"
+                helperText="Upload your completed solution (.xlsx, .sql, .pbix, .py, .pdf, etc. Max 20 MB)"
               />
             </div>
 

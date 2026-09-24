@@ -20,6 +20,7 @@ import {
   UserCheck,
   FileBarChart,
   Layers,
+  BookOpen,
   X
 } from 'lucide-react';
 
@@ -127,6 +128,28 @@ export default function Sidebar({ isOpen, onClose }) {
               );
             })}
           </nav>
+
+          {/* Guide Quick Access Link */}
+          <div className="pt-2 border-t border-slate-100">
+            <NavLink
+              to="/guide"
+              onClick={() => {
+                if (window.innerWidth < 1024 && onClose) {
+                  onClose();
+                }
+              }}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-brand-primary font-semibold'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-brand-primary'
+                }`
+              }
+            >
+              <BookOpen className="w-4 h-4 flex-shrink-0 text-brand-primary" />
+              <span>Platform Guide & PDF</span>
+            </NavLink>
+          </div>
         </div>
 
         {/* Sidebar Footer info */}
