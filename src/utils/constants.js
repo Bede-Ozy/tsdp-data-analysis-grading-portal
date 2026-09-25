@@ -9,7 +9,7 @@ export const PROGRAM_INFO = {
   partner: "ShamzBridge Consult",
   totalStudents: 27,
   durationMonths: 4,
-  currentWeek: 6,
+  currentWeek: 10,
   totalWeeks: 16,
 };
 

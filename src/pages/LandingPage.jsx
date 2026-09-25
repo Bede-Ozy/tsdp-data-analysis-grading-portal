@@ -151,7 +151,7 @@ export default function LandingPage() {
           {/* Main Hero Headline */}
           <div className="space-y-4 max-w-4xl mx-auto">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15]">
-              Next-Generation Data Analytics Residency &{' '}
+              Next-Generation Data Analytics Fellowship &{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500">
                 Evaluation Portal
               </span>
@@ -214,7 +214,7 @@ export default function LandingPage() {
                   to={getDashboardPath()}
                   className="font-bold underline text-amber-300 hover:text-white shrink-0"
                 >
-                  Enter Console ➔
+                  Enter Portal ➔
                 </Link>
               </div>
             </div>
@@ -227,22 +227,22 @@ export default function LandingPage() {
       {/* ========================================================================= */}
       <section id="portals" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 sm:-mt-14 relative z-20 w-full">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Resident Scholar Portal */}
+          {/* Card 1: Fellow Portal */}
           <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-card-hover hover:border-brand-primary transition-all group flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-xl bg-orange-50 text-brand-primary flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors shadow-orange-xs">
                   <GraduationCap className="w-6 h-6" />
                 </div>
-                <span className="badge-primary font-semibold text-[11px]">Resident Portal</span>
+                <span className="badge-primary font-semibold text-[11px]">Fellows Portal</span>
               </div>
 
               <div>
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
-                  Resident Scholar
+                  Fellow
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Dedicated workspace for enrolled data analytics scholars.
+                  Dedicated workspace for enrolled data analytics fellows.
                 </p>
               </div>
 
@@ -270,7 +270,7 @@ export default function LandingPage() {
               to="/student/login"
               className="w-full py-2.5 px-4 bg-orange-50 hover:bg-brand-primary text-brand-primary hover:text-white rounded-xl text-xs font-bold border border-orange-200 hover:border-brand-primary flex items-center justify-center gap-2 transition-all shadow-xs group-hover:shadow-orange-xs"
             >
-              <span>Resident Scholar Login</span>
+              <span>Fellow Login</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -353,7 +353,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-                  <span>Manage residents, faculty roster & capstone groups</span>
+                  <span>Manage fellows, faculty roster & capstone groups</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-slate-800 shrink-0" />
@@ -483,7 +483,7 @@ export default function LandingPage() {
               100% Transparent Grading Architecture
             </h2>
             <p className="text-xs sm:text-sm text-slate-600">
-              Resident progress is assessed holistically across 9 rigorous pillars to develop both technical mastery and workplace leadership.
+              Fellow progress is assessed holistically across 9 rigorous pillars to develop both technical mastery and workplace leadership.
             </p>
           </div>
 
@@ -549,7 +549,7 @@ export default function LandingPage() {
             <span className="text-xs font-extrabold text-brand-primary bg-orange-50 px-2 py-0.5 rounded-md inline-block">Implementing Partner</span>
             <h3 className="text-sm font-bold text-slate-900">ShamzBridge Consult</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Premier data analytics, advisory, and human capital transformation firm executing curriculum delivery, live grading portal governance, and residency operations.
+              Premier data analytics, advisory, and human capital transformation firm executing curriculum delivery, live grading portal governance, and fellowship operations.
             </p>
           </div>
         </div>
@@ -571,7 +571,7 @@ export default function LandingPage() {
             </Link>
             <span className="text-slate-300">·</span>
             <Link to="/student/login" className="hover:text-brand-primary transition-colors">
-              Resident Scholar
+              Fellow
             </Link>
             <span className="text-slate-300">·</span>
             <Link to="/coach/login" className="hover:text-brand-primary transition-colors">

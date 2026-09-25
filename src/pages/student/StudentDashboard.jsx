@@ -40,6 +40,7 @@ export default function StudentDashboard() {
   const [complianceData, setComplianceData] = useState(null);
   const [groupRankData, setGroupRankData] = useState(null);
   const [socialSubmissions, setSocialSubmissions] = useState([]);
+  const [currentWeek, setCurrentWeek] = useState(PROGRAM_INFO.currentWeek || 10);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -92,6 +93,10 @@ export default function StudentDashboard() {
         if (dashRes && dashRes.success !== false) {
           const payload = dashRes.data || dashRes;
           
+          if (payload.currentWeek) {
+            setCurrentWeek(Number(payload.currentWeek));
+          }
+
           // 1. Performance Data
           const pData = payload.performance || (payload.finalScore !== undefined || payload.overallScore !== undefined ? payload : null);
           setPerformance(pData);
@@ -338,9 +343,9 @@ export default function StudentDashboard() {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-blue-100 text-xs font-semibold backdrop-blur-xs border border-white/10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-orange-100 text-xs font-semibold backdrop-blur-xs border border-white/10">
               <Sparkles className="w-3.5 h-3.5 text-brand-secondary" />
-              <span>Week {PROGRAM_INFO.currentWeek} of {PROGRAM_INFO.totalWeeks} · Data Analytics Cohort</span>
+              <span>Week {currentWeek} of {PROGRAM_INFO.totalWeeks} · Data Analytics Cohort</span>
             </div>
             {isEditingName ? (
               <form onSubmit={handleSaveName} className="flex items-center gap-2 pt-1">
@@ -824,7 +829,7 @@ export default function StudentDashboard() {
           </div>
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-xl sm:text-2xl font-semibold text-brand-neutral">Data Analytics</span>
-            <span className="badge-primary text-[10px]">Week {PROGRAM_INFO.currentWeek}</span>
+            <span className="badge-primary text-[10px]">Week {currentWeek}</span>
           </div>
           <p className="text-[11px] text-brand-neutral-muted mt-2">4-month professional specialization</p>
         </div>

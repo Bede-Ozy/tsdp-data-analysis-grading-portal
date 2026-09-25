@@ -53,6 +53,7 @@ export default function CoachDashboard() {
   const [activeAssignmentsCount, setActiveAssignmentsCount] = useState(0);
   const [showBelow70Only, setShowBelow70Only] = useState(false);
   const [groupLeaderboard, setGroupLeaderboard] = useState([]);
+  const [currentWeek, setCurrentWeek] = useState(PROGRAM_INFO.currentWeek || 10);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -143,6 +144,10 @@ export default function CoachDashboard() {
           const stdsList = payload.students || [];
           const perfList = payload.performance || payload.studentsPerformance || [];
           const subsList = payload.submissions || payload.pendingSubmissions || [];
+
+          if (payload.currentWeek) {
+            setCurrentWeek(Number(payload.currentWeek));
+          }
 
           setStudents(Array.isArray(stdsList) ? stdsList : []);
           setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
@@ -338,7 +343,7 @@ export default function CoachDashboard() {
               </div>
             )}
             <p className="text-xs sm:text-sm text-orange-100 max-w-xl">
-              TSDP 2026 Data Analytics Cohort · Week {PROGRAM_INFO.currentWeek} Active · {students.length > 0 ? `${students.length} Residents Enrolled` : 'Connecting to live database...'}
+              TSDP 2026 Data Analytics Cohort · Week {currentWeek} Active · {students.length > 0 ? `${students.length} Residents Enrolled` : 'Connecting to live database...'}
             </p>
 
             {/* Quick Action Buttons - Aligned Side by Side Under the Text */}
