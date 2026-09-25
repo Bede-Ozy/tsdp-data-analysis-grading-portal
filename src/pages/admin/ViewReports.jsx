@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { getAllStudents } from '../../services/api';
+import {
+  getAllStudents,
+  getAllStudentsPerformance,
+  getCachedCohortAttendance,
+  getCohortAttendanceMap
+} from '../../services/api';
 import { GRADING_WEIGHTS, getGradeLetter, PROGRAM_INFO, formatScore } from '../../utils/constants';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FileBarChart, Download, Printer, Award, TrendingUp, CheckCircle2 } from 'lucide-react';
@@ -11,10 +16,81 @@ export default function ViewReports() {
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await getAllStudents();
-        const list = Array.isArray(res) ? res : (res?.data || res?.students || []);
-        if (list.length > 0) {
-          setStudents(list);
+        const [stdsRes, perfRes] = await Promise.all([
+          getAllStudents().catch(() => null),
+          getAllStudentsPerformance().catch(() => null)
+        ]);
+
+        const stdsList = Array.isArray(stdsRes) ? stdsRes : (stdsRes?.data || stdsRes?.students || []);
+        const perfList = Array.isArray(perfRes) ? perfRes : (perfRes?.data || []);
+        const cachedAttMap = getCachedCohortAttendance() || {};
+
+        const perfMap = new Map();
+        if (Array.isArray(perfList)) {
+          perfList.forEach(p => {
+            if (p.studentID) perfMap.set(String(p.studentID).toLowerCase().trim(), p);
+            if (p.studentNumber) perfMap.set(String(p.studentNumber).padStart(3, '0'), p);
+          });
+        }
+
+        const merged = stdsList.map(s => {
+          const sIdKey = String(s.studentID || '').toLowerCase().trim();
+          const sNumKey = String(s.studentNumber || '').padStart(3, '0');
+          const perf = perfMap.get(sIdKey) || perfMap.get(sNumKey) || {};
+          const attInfo = cachedAttMap[s.studentID] || cachedAttMap[sNumKey];
+
+          const rawScore = perf.finalScore !== undefined && perf.finalScore !== null
+            ? Number(perf.finalScore)
+            : (perf.overallScore !== undefined && perf.overallScore !== null
+              ? Number(perf.overallScore)
+              : (s.overallScore !== undefined && s.overallScore !== null ? Number(s.overallScore) : null));
+
+          // Normalize score if represented as a decimal fraction from Google Sheets (e.g. 0.3958 -> 39.58)
+          const finalScore = rawScore !== null && !isNaN(rawScore)
+            ? (rawScore <= 1.0 && rawScore > 0 ? rawScore * 100 : rawScore)
+            : null;
+
+          const rawAtt = attInfo?.attendanceRate !== undefined
+            ? Number(attInfo.attendanceRate)
+            : (s.attendanceRate !== undefined && s.attendanceRate !== null
+              ? Number(s.attendanceRate)
+              : (perf.attendanceRate !== undefined && perf.attendanceRate !== null ? Number(perf.attendanceRate) : null));
+
+          const attendanceRate = rawAtt !== null && !isNaN(rawAtt)
+            ? (rawAtt <= 1.0 && rawAtt > 0 ? rawAtt * 100 : rawAtt)
+            : null;
+
+          return {
+            ...s,
+            ...perf,
+            overallScore: finalScore,
+            attendanceRate: attendanceRate,
+            grade: perf.grade || (finalScore !== null ? getGradeLetter(finalScore).letter : 'Pending')
+          };
+        });
+
+        if (merged.length > 0) {
+          setStudents(merged);
+        }
+
+        // Background sync attendance if cache is empty
+        if (Object.keys(cachedAttMap).length === 0 && stdsList.length > 0) {
+          const studentIds = stdsList.map(st => st.studentID).filter(Boolean);
+          getCohortAttendanceMap(studentIds).then(freshMap => {
+            if (freshMap && Object.keys(freshMap).length > 0) {
+              setStudents(prev => prev.map(st => {
+                const numKey = String(st.studentNumber || '').padStart(3, '0');
+                const info = freshMap[st.studentID] || freshMap[numKey];
+                if (info && info.attendanceRate !== undefined) {
+                  return {
+                    ...st,
+                    attendanceRate: Number(info.attendanceRate)
+                  };
+                }
+                return st;
+              }));
+            }
+          }).catch(console.warn);
         }
       } catch (err) {
         console.error('Failed to load students for reports:', err);
@@ -29,12 +105,20 @@ export default function ViewReports() {
     return <LoadingSpinner size="lg" text="Generating comprehensive cohort reports..." />;
   }
 
-  // Calculate grade distribution counts
+  // Calculate grade distribution counts based on live scores
   const distribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+  let pendingCount = 0;
+
   students.forEach(s => {
-    const letter = getGradeLetter(s.overallScore).letter;
-    if (distribution[letter] !== undefined) {
-      distribution[letter] += 1;
+    if (s.overallScore !== null && s.overallScore !== undefined && !isNaN(s.overallScore)) {
+      const letter = getGradeLetter(s.overallScore).letter;
+      if (distribution[letter] !== undefined) {
+        distribution[letter] += 1;
+      } else {
+        pendingCount += 1;
+      }
+    } else {
+      pendingCount += 1;
     }
   });
 
@@ -128,7 +212,7 @@ export default function ViewReports() {
 
           <div className="p-3 bg-red-50/70 rounded-xl border border-red-100 text-center">
             <span className="text-[10px] font-medium uppercase text-brand-error block">Fail / Pending (&lt; 45%)</span>
-            <span className="text-2xl font-semibold text-brand-error">{distribution.F}</span>
+            <span className="text-2xl font-semibold text-brand-error">{distribution.F + pendingCount}</span>
             <span className="text-[11px] text-red-600 block font-normal">Residents</span>
           </div>
         </div>

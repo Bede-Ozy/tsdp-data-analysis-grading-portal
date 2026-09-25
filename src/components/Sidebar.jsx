@@ -141,7 +141,7 @@ export default function Sidebar({ isOpen, onClose }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-brand-primary font-semibold'
+                    ? 'bg-orange-50 text-brand-primary font-semibold border border-orange-200/60'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-brand-primary'
                 }`
               }

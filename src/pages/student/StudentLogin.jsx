@@ -51,7 +51,7 @@ export default function StudentLogin() {
               <GraduationCap className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-semibold tracking-normal text-white">Resident Student Portal</h1>
-            <p className="text-xs text-blue-100 mt-1">ITF-NECA TSDP Data Analytics Cohort 2026</p>
+            <p className="text-xs text-orange-100 mt-1">ITF-NECA TSDP Data Analytics Cohort 2026</p>
           </div>
 
           <div className="p-6 sm:p-8">

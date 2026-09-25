@@ -46,6 +46,9 @@ import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
 // Documentation & Guide Page
 import PlatformGuide from './pages/PlatformGuide';
 
+// Public Landing Page
+import LandingPage from './pages/LandingPage';
+
 function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
@@ -141,10 +144,13 @@ export default function App() {
             {/* Standalone Full-Width Full-Height Error Page (No Sidebar) */}
             <Route path="/error" element={<ErrorPage />} />
 
+            {/* Standalone Public Showcase Landing Page (No Sidebar, Full Width) */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Portal Application Layout with Navbar & Sidebar */}
             <Route element={<AppLayout />}>
-              {/* Root Route */}
-              <Route path="/" element={<HomeRedirect />} />
+              {/* Legacy / Direct Role Redirect */}
+              <Route path="/home" element={<HomeRedirect />} />
 
 
             {/* Public Documentation & Workflow Guide Pages */}

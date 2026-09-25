@@ -93,7 +93,7 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
                     onError={() => handleLogoError('neca')}
                   />
                 ) : (
-                  <div className="h-8 px-2 rounded bg-brand-primary text-white font-medium text-xs flex items-center shadow-xs">
+                  <div className="h-8 px-2 rounded bg-brand-secondary text-white font-medium text-xs flex items-center shadow-xs">
                     NECA
                   </div>
                 )}
@@ -107,7 +107,7 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
                     onError={() => handleLogoError('shamzbridge')}
                   />
                 ) : (
-                  <div className="h-8 px-2 rounded bg-brand-secondary text-white font-medium text-xs flex items-center shadow-xs">
+                  <div className="h-8 px-2 rounded bg-brand-primary text-white font-medium text-xs flex items-center shadow-xs">
                     SHAMZBRIDGE
                   </div>
                 )}
@@ -131,7 +131,7 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
               to="/guide"
               className={`py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
                 location.pathname === '/guide' || location.pathname === '/about'
-                  ? 'bg-blue-50 text-brand-primary font-semibold border border-blue-200'
+                  ? 'bg-orange-50 text-brand-primary font-semibold border border-orange-200/80'
                   : 'text-slate-600 hover:text-brand-primary hover:bg-slate-100'
               }`}
               title="Platform Operations Guide & Workflow Breakdown"

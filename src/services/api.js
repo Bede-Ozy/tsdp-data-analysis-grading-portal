@@ -390,3 +390,82 @@ export const getAllCapstoneGroups = () =>
 
 export const getAllClassGroups = () => 
   callApi('getAllClassGroups', []);
+
+// =========================================================================
+// Cohort Attendance Cache & Concurrent Batch Loader
+// =========================================================================
+const COHORT_ATTENDANCE_CACHE_KEY = 'tsdp_cohort_attendance_cache';
+const ATTENDANCE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache validity
+
+/**
+ * Returns cached attendance map synchronously from sessionStorage if valid.
+ */
+export function getCachedCohortAttendance() {
+  try {
+    const raw = typeof window !== 'undefined' ? sessionStorage.getItem(COHORT_ATTENDANCE_CACHE_KEY) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < ATTENDANCE_CACHE_TTL)) {
+      return parsed.data || null;
+    }
+  } catch (e) {
+    // Graceful fallback on storage access error
+  }
+  return null;
+}
+
+/**
+ * Concurrently fetches attendance records across all cohort students with batching,
+ * caching results in sessionStorage to keep page interactions instant.
+ */
+export async function getCohortAttendanceMap(studentIDs = [], forceRefresh = false, onProgress = null) {
+  if (!forceRefresh) {
+    const cached = getCachedCohortAttendance();
+    if (cached && Object.keys(cached).length > 0) {
+      return cached;
+    }
+  }
+
+  // Use provided student IDs or generate full cohort range (001 - 028)
+  const ids = Array.isArray(studentIDs) && studentIDs.length > 0
+    ? studentIDs
+    : Array.from({ length: 28 }, (_, i) => `TSDP2026-RES-${String(i + 1).padStart(3, '0')}`);
+
+  const attendanceMap = {};
+  const batchSize = 6;
+
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    await Promise.all(batch.map(async id => {
+      try {
+        const res = await callApi('getStudentAttendance', [id]);
+        if (res && res.attendanceRate !== undefined) {
+          attendanceMap[id] = {
+            attendanceRate: Number(res.attendanceRate),
+            presentCount: Number(res.presentCount || 0),
+            lateCount: Number(res.lateCount || 0),
+            totalDays: Number(res.totalDays || 0)
+          };
+        }
+      } catch (err) {
+        // Tolerates individual failure
+      }
+    }));
+    if (onProgress) {
+      onProgress(Math.min(ids.length, i + batchSize), ids.length);
+    }
+  }
+
+  try {
+    if (typeof window !== 'undefined' && Object.keys(attendanceMap).length > 0) {
+      sessionStorage.setItem(COHORT_ATTENDANCE_CACHE_KEY, JSON.stringify({
+        timestamp: Date.now(),
+        data: attendanceMap
+      }));
+    }
+  } catch (e) {
+    // Quota safety
+  }
+
+  return attendanceMap;
+}
