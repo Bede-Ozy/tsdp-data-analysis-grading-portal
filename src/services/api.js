@@ -18,12 +18,24 @@ const API_KEY = import.meta.env.VITE_API_KEY;
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export async function callApiCached(functionName, parameters = [], ttl = CACHE_TTL) {
-  const cacheKey = `${functionName}:${JSON.stringify(parameters)}`;
-  const cached = cache.get(cacheKey);
+export function clearApiCache() {
+  cache.clear();
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(COHORT_ATTENDANCE_CACHE_KEY);
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+}
 
-  if (cached && Date.now() - cached.timestamp < ttl) {
-    return cached.data;
+export async function callApiCached(functionName, parameters = [], ttl = CACHE_TTL, forceRefresh = false) {
+  const cacheKey = `${functionName}:${JSON.stringify(parameters)}`;
+  if (!forceRefresh) {
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.data;
+    }
   }
 
   const data = await callApi(functionName, parameters);
@@ -57,7 +69,9 @@ export async function callApi(functionName, parameters = [], maxRetries = 3) {
     try {
       const response = await axios.post(API_URL, payload, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         timeout: 15000
       });
@@ -178,7 +192,11 @@ export async function callApiDirect(functionName, parameters = []) {
     const response = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      },
       redirect: 'follow'
     });
 

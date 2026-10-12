@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { studentLogin as apiStudentLogin, coachLogin as apiCoachLogin } from '../services/api';
+import { studentLogin as apiStudentLogin, coachLogin as apiCoachLogin, clearApiCache } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -200,13 +200,20 @@ export const AuthProvider = ({ children }) => {
     return authenticateStaff(adminNumber, email, 'admin');
   };
 
-  // Logout
+  // Logout - Clear localStorage completely to prevent stale caches across sessions
   const logout = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (err) {
+      console.error('Failed to clear storage on logout:', err);
+    }
+    clearApiCache();
     setUser(null);
     setRole(null);
-    localStorage.removeItem('tsdp_user');
-    localStorage.removeItem('tsdp_role');
   };
+
+  const handleLogout = logout;
 
   return (
     <AuthContext.Provider
@@ -219,6 +226,7 @@ export const AuthProvider = ({ children }) => {
         loginCoach,
         loginAdmin,
         logout,
+        handleLogout,
         isAuthenticated: !!user,
         isStudent: role === 'student',
         isCoach: role === 'coach',

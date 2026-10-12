@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -8,7 +8,8 @@ import {
   getPendingSocialPosts,
   approveSocialMediaPost,
   rejectSocialMediaPost,
-  getGroupLeaderboard
+  getGroupLeaderboard,
+  clearApiCache
 } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
 import { CardSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
@@ -36,13 +37,15 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Trophy
+  Trophy,
+  RotateCw
 } from 'lucide-react';
 
 export default function CoachDashboard() {
   const { user, updateUserProfile } = useAuth();
   const [students, setStudents] = useState([]);
   const [studentsPerformance, setStudentsPerformance] = useState([]);
+  const [attendance, setAttendance] = useState(null);
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [pendingModuleProjects, setPendingModuleProjects] = useState([]);
   const [pendingPosts, setPendingPosts] = useState([]);
@@ -55,6 +58,7 @@ export default function CoachDashboard() {
   const [groupLeaderboard, setGroupLeaderboard] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(PROGRAM_INFO.currentWeek || 10);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
@@ -127,111 +131,120 @@ export default function CoachDashboard() {
     }
   };
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [dashRes, asgnRes, modProjectsRes, socialPostsRes, leaderboardRes] = await Promise.all([
-          getCoachDashboard(),
-          getActiveAssignments().catch(() => null),
-          getPendingModuleProjects().catch(() => null),
-          getPendingSocialPosts().catch(() => null),
-          getGroupLeaderboard().catch(() => null)
-        ]);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [dashRes, asgnRes, modProjectsRes, socialPostsRes, leaderboardRes] = await Promise.all([
+        getCoachDashboard(),
+        getActiveAssignments().catch(() => null),
+        getPendingModuleProjects().catch(() => null),
+        getPendingSocialPosts().catch(() => null),
+        getGroupLeaderboard().catch(() => null)
+      ]);
 
-        if (dashRes && dashRes.success !== false) {
-          const payload = dashRes.data || dashRes;
-          const stdsList = payload.students || [];
-          const perfList = payload.performance || payload.studentsPerformance || [];
-          const subsList = payload.submissions || payload.pendingSubmissions || [];
+      if (dashRes && dashRes.success !== false) {
+        const payload = dashRes.data || dashRes;
+        const stdsList = payload.students || [];
+        const perfList = payload.performance || payload.studentsPerformance || [];
+        const subsList = payload.submissions || payload.pendingSubmissions || [];
 
-          if (payload.currentWeek) {
-            setCurrentWeek(Number(payload.currentWeek));
-          }
-
-          setStudents(Array.isArray(stdsList) ? stdsList : []);
-          setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
-          setPendingSubmissions(Array.isArray(subsList) ? subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending') : []);
-
-          if (payload.activeAssignmentsCount !== undefined) {
-            setActiveAssignmentsCount(payload.activeAssignmentsCount);
-          }
+        if (payload.currentWeek) {
+          setCurrentWeek(Number(payload.currentWeek));
         }
 
-        // Dedicated social posts endpoint + fallback + localStorage merge
-        let mergedSocial = [];
-        if (socialPostsRes && socialPostsRes.success !== false) {
-          const list = Array.isArray(socialPostsRes)
-            ? socialPostsRes
-            : (socialPostsRes.data || socialPostsRes.posts || []);
-          if (Array.isArray(list)) mergedSocial = [...list];
+        setStudents(Array.isArray(stdsList) ? stdsList : []);
+        setStudentsPerformance(Array.isArray(perfList) ? perfList : []);
+        setPendingSubmissions(Array.isArray(subsList) ? subsList.filter(s => s.status === 'Ungraded' || s.status === 'Pending') : []);
+        setAttendance(payload.attendance || dashRes.attendance || null);
+
+        if (payload.activeAssignmentsCount !== undefined) {
+          setActiveAssignmentsCount(payload.activeAssignmentsCount);
         }
-
-        if (mergedSocial.length === 0 && dashRes && dashRes.success !== false) {
-          const payload = dashRes.data || dashRes;
-          const postsList = payload.socialPosts || payload.pendingPosts || [];
-          if (Array.isArray(postsList)) mergedSocial = [...postsList];
-        }
-
-        try {
-          const localPosts = JSON.parse(localStorage.getItem('tsdp_social_media_submissions') || '[]');
-          localPosts.forEach(lp => {
-            if (!mergedSocial.some(p => p.postID === lp.postID || p.postUrl === lp.postUrl)) {
-              mergedSocial.unshift(lp);
-            }
-          });
-        } catch (e) {
-          console.warn('Could not read cached social posts', e);
-        }
-
-        const pendingSocial = mergedSocial.filter(p => p.status === 'Pending' || p.status === 'Submitted' || !p.status);
-        setPendingPosts(pendingSocial);
-
-        const initScores = {};
-        const initFeedbacks = {};
-        pendingSocial.forEach(p => {
-          initScores[p.postID] = p.score ?? 5;
-          initFeedbacks[p.postID] = p.feedback || '';
-        });
-        setPostScores(initScores);
-        setPostFeedbacks(initFeedbacks);
-
-        if (asgnRes && asgnRes.success !== false) {
-          const list = Array.isArray(asgnRes) ? asgnRes : (asgnRes.data || asgnRes.assignments || []);
-          const count = list.filter(a => !(a.status && a.status.toLowerCase() === 'closed') && !a.isClosed).length || list.length;
-          setActiveAssignmentsCount(count);
-        }
-
-        if (modProjectsRes && modProjectsRes.success !== false) {
-          const list = Array.isArray(modProjectsRes) ? modProjectsRes : (modProjectsRes.data || []);
-          setPendingModuleProjects(list);
-        }
-
-        // Process Group Leaderboard from Backend
-        let board = [];
-        if (leaderboardRes && leaderboardRes.success !== false) {
-          const raw = Array.isArray(leaderboardRes)
-            ? leaderboardRes
-            : (leaderboardRes.data?.leaderboard || leaderboardRes.leaderboard || leaderboardRes.data || leaderboardRes.groups || []);
-          if (Array.isArray(raw) && raw.length > 0) {
-            board = raw.map((item, idx) => ({
-              rank: item.rank || idx + 1,
-              group: item.group || item.groupName || item.className || item.classGroup || item.team || `Group ${idx + 1}`,
-              average: item.average ?? item.averageScore ?? item.avgScore ?? item.avg ?? 0,
-              total: item.total ?? item.totalScore ?? item.points ?? item.totalPoints ?? 0,
-              presentations: item.presentations ?? item.presentationCount ?? item.count ?? item.totalPresentations ?? 0
-            }));
-          }
-        }
-        setGroupLeaderboard(board);
-      } catch (err) {
-        console.error('Error loading coach dashboard:', err);
-      } finally {
-        setLoading(false);
       }
+
+      // Dedicated social posts endpoint + fallback + localStorage merge
+      let mergedSocial = [];
+      if (socialPostsRes && socialPostsRes.success !== false) {
+        const list = Array.isArray(socialPostsRes)
+          ? socialPostsRes
+          : (socialPostsRes.data || socialPostsRes.posts || []);
+        if (Array.isArray(list)) mergedSocial = [...list];
+      }
+
+      if (mergedSocial.length === 0 && dashRes && dashRes.success !== false) {
+        const payload = dashRes.data || dashRes;
+        const postsList = payload.socialPosts || payload.pendingPosts || [];
+        if (Array.isArray(postsList)) mergedSocial = [...postsList];
+      }
+
+      try {
+        const localPosts = JSON.parse(localStorage.getItem('tsdp_social_media_submissions') || '[]');
+        localPosts.forEach(lp => {
+          if (!mergedSocial.some(p => p.postID === lp.postID || p.postUrl === lp.postUrl)) {
+            mergedSocial.unshift(lp);
+          }
+        });
+      } catch (e) {
+        console.warn('Could not read cached social posts', e);
+      }
+
+      const pendingSocial = mergedSocial.filter(p => p.status === 'Pending' || p.status === 'Submitted' || !p.status);
+      setPendingPosts(pendingSocial);
+
+      const initScores = {};
+      const initFeedbacks = {};
+      pendingSocial.forEach(p => {
+        initScores[p.postID] = p.score ?? 5;
+        initFeedbacks[p.postID] = p.feedback || '';
+      });
+      setPostScores(initScores);
+      setPostFeedbacks(initFeedbacks);
+
+      if (asgnRes && asgnRes.success !== false) {
+        const list = Array.isArray(asgnRes) ? asgnRes : (asgnRes.data || asgnRes.assignments || []);
+        const count = list.filter(a => !(a.status && a.status.toLowerCase() === 'closed') && !a.isClosed).length || list.length;
+        setActiveAssignmentsCount(count);
+      }
+
+      if (modProjectsRes && modProjectsRes.success !== false) {
+        const list = Array.isArray(modProjectsRes) ? modProjectsRes : (modProjectsRes.data || []);
+        setPendingModuleProjects(list);
+      }
+
+      // Process Group Leaderboard from Backend
+      let board = [];
+      if (leaderboardRes && leaderboardRes.success !== false) {
+        const raw = Array.isArray(leaderboardRes)
+          ? leaderboardRes
+          : (leaderboardRes.data?.leaderboard || leaderboardRes.leaderboard || leaderboardRes.data || leaderboardRes.groups || []);
+        if (Array.isArray(raw) && raw.length > 0) {
+          board = raw.map((item, idx) => ({
+            rank: item.rank || idx + 1,
+            group: item.group || item.groupName || item.className || item.classGroup || item.team || `Group ${idx + 1}`,
+            average: item.average ?? item.averageScore ?? item.avgScore ?? item.avg ?? 0,
+            total: item.total ?? item.totalScore ?? item.points ?? item.totalPoints ?? 0,
+            presentations: item.presentations ?? item.presentationCount ?? item.count ?? item.totalPresentations ?? 0
+          }));
+        }
+      }
+      setGroupLeaderboard(board);
+    } catch (err) {
+      console.error('Error loading coach dashboard:', err);
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    clearApiCache();
+    await loadData();
+    setIsRefreshing(false);
+  };
 
   // Calculate Class Average Score from getAllStudentsPerformance()
   const validScores = studentsPerformance
@@ -242,16 +255,28 @@ export default function CoachDashboard() {
     ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length)
     : null;
 
-  // Calculate Average Attendance from getAllStudentsPerformance() or students
+  // Calculate Average Attendance from getCoachDashboard() response
   const validAttendances = studentsPerformance
     .map(p => p.attendanceRate !== undefined && p.attendanceRate !== null ? Number(p.attendanceRate) : (p.attendanceScore !== undefined && p.attendanceScore !== null ? Number(p.attendanceScore) : null))
     .filter(a => a !== null && !isNaN(a));
 
-  const avgAttendance = validAttendances.length > 0
-    ? Math.round(validAttendances.reduce((sum, a) => sum + a, 0) / validAttendances.length)
-    : (students.some(s => s.attendanceRate !== undefined && s.attendanceRate !== null)
-      ? Math.round(students.reduce((sum, s) => sum + (Number(s.attendanceRate) || 0), 0) / students.length)
-      : null);
+  const attendanceObj = attendance && typeof attendance === 'object' ? attendance : null;
+  const rates = attendanceObj
+    ? Object.values(attendanceObj)
+        .map(a => (a && a.attendanceRate !== undefined && a.attendanceRate !== null ? Number(a.attendanceRate) : (typeof a === 'number' ? a : null)))
+        .filter(r => r !== null && !isNaN(r))
+    : [];
+
+  const averageAttendance = rates.length > 0
+    ? Math.round(rates.reduce((sum, r) => sum + r, 0) / rates.length)
+    : (validAttendances.length > 0
+      ? Math.round(validAttendances.reduce((sum, a) => sum + a, 0) / validAttendances.length)
+      : (students.some(s => s.attendanceRate !== undefined && s.attendanceRate !== null)
+        ? Math.round(students.reduce((sum, s) => sum + (Number(s.attendanceRate) || 0), 0) / students.length)
+        : 0));
+
+  const attendanceStudentCount = rates.length > 0 ? rates.length : (students.length || 0);
+  const avgAttendance = averageAttendance;
 
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Coach';
 
@@ -348,6 +373,16 @@ export default function CoachDashboard() {
 
             {/* Quick Action Buttons - Aligned Side by Side Under the Text */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing || loading}
+                className="bg-white/20 hover:bg-white/30 active:bg-white/35 text-white font-semibold px-4 py-2.5 rounded-xl border border-white/25 backdrop-blur-xs transition-all flex items-center gap-2 text-xs shadow-xs disabled:opacity-60 cursor-pointer"
+                title="Force fresh API fetch"
+              >
+                <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+              </button>
               <Link
                 to="/coach/create-assignment"
                 className="bg-brand-primary hover:bg-brand-primary-dark text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-2 text-xs"
@@ -504,16 +539,20 @@ export default function CoachDashboard() {
             {/* Average Attendance */}
             <div className="portal-card">
               <div className="flex items-center justify-between text-brand-neutral-muted mb-2">
-                <span className="text-xs font-medium text-slate-500 tracking-wide">Avg Attendance</span>
+                <span className="text-xs font-medium text-slate-500 tracking-wide">Average Attendance</span>
                 <Clock className="w-4 h-4 text-brand-primary" />
               </div>
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-2xl sm:text-3xl font-semibold text-brand-neutral">
-                  {avgAttendance !== null ? `${avgAttendance}%` : '—'}
+                  {averageAttendance}%
                 </span>
-                {avgAttendance !== null && <span className="badge-success text-[10px]">Tracked</span>}
+                <span className="badge-secondary text-[10px]">
+                  Across {attendanceStudentCount} {attendanceStudentCount === 1 ? 'student' : 'students'}
+                </span>
               </div>
-              <p className="text-[11px] text-brand-neutral-muted mt-2">Punctuality rate</p>
+              <p className="text-[11px] text-brand-neutral-muted mt-2">
+                Present marks out of 160 total sessions
+              </p>
             </div>
           </div>
 

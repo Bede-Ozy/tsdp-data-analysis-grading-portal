@@ -151,7 +151,7 @@ export default function LandingPage() {
           {/* Main Hero Headline */}
           <div className="space-y-4 max-w-4xl mx-auto">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15]">
-              Next-Generation Data Analytics Fellowship &{' '}
+              Next-Generation Data Analytics Fellowship{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500">
                 Evaluation Portal
               </span>
