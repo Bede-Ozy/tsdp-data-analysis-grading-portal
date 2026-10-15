@@ -636,7 +636,7 @@ function updateFeedbackReviewStatus(feedbackId, newStatus, coachNotes, targetShe
               target="_blank"
               className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-white/20 flex items-center gap-2 transition-all shadow-xs"
             >
-              <ExternalLink className="w-4 h-4 text-blue-300" /> Open Feedback Form
+              <ExternalLink className="w-4 h-4 text-blue-300" /> View Form
             </Link>
 
             <button
