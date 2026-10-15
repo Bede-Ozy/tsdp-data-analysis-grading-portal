@@ -493,6 +493,7 @@ export async function getCohortAttendanceMap(studentIDs = [], forceRefresh = fal
 // =========================================================================
 const FEEDBACK_STORAGE_KEY = 'tsdp_challenge_feedback_responses';
 const FEEDBACK_SHEET_KEY = 'tsdp_feedback_sheet_id';
+export const DEFAULT_FEEDBACK_SHEET_ID = '1JW0wI8zsuxeDiDzx-HvFmJhjOzIXP5_YzfepIbqdvq0';
 
 /**
  * Returns the configured target Google Sheet ID for Challenge Feedback.
@@ -512,7 +513,7 @@ export function getFeedbackSheetId() {
                 import.meta.env.VITE_SHEET_ID;
   if (envId && envId.trim()) return envId.trim();
 
-  return '';
+  return DEFAULT_FEEDBACK_SHEET_ID;
 }
 
 /**
@@ -551,7 +552,7 @@ export function clearFeedbackResponses() {
  * Also persists locally to ensure submissions are immediately visible in dashboard.
  */
 export async function submitChallengeFeedback(feedbackData, customSheetId = '') {
-  const targetSheetId = (customSheetId || getFeedbackSheetId() || '').trim();
+  const targetSheetId = (customSheetId || getFeedbackSheetId() || DEFAULT_FEEDBACK_SHEET_ID).trim();
   
   const record = {
     id: feedbackData.id || `FB-${Date.now()}`,
@@ -672,7 +673,7 @@ export async function submitChallengeFeedback(feedbackData, customSheetId = '') 
  * Returns only genuine live submissions (dummy data strictly removed).
  */
 export async function getChallengeFeedbackList(customSheetId = '', forceRefresh = false) {
-  const targetSheetId = (customSheetId || getFeedbackSheetId() || '').trim();
+  const targetSheetId = (customSheetId || getFeedbackSheetId() || DEFAULT_FEEDBACK_SHEET_ID).trim();
 
   // 1. Try to read from backend
   let remoteList = null;
