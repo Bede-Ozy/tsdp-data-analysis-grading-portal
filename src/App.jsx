@@ -19,6 +19,10 @@ import SubmitAssignment from './pages/student/SubmitAssignment';
 import SubmitModuleProject from './pages/student/SubmitModuleProject';
 import SubmitSocialMedia from './pages/student/SubmitSocialMedia';
 import ViewPerformance from './pages/student/ViewPerformance';
+import ChallengeFeedback from './pages/student/ChallengeFeedback';
+
+// Feedback & Round-Up Analytics (Shared Coach & Admin)
+import FeedbackAnalyticsDashboard from './pages/coach/FeedbackAnalyticsDashboard';
 
 // Coach Pages
 import CoachLogin from './pages/coach/CoachLogin';
@@ -157,6 +161,10 @@ export default function App() {
             <Route path="/guide" element={<PlatformGuide />} />
             <Route path="/about" element={<PlatformGuide />} />
 
+            {/* Public Challenge Feedback Form (Accessible directly by link without login) */}
+            <Route path="/feedback" element={<ChallengeFeedback />} />
+            <Route path="/challenge-feedback" element={<ChallengeFeedback />} />
+
             {/* Public Authentication Pages */}
             <Route path="/student/login" element={<StudentLogin />} />
             <Route path="/coach/login" element={<CoachLogin />} />
@@ -208,6 +216,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['student']}>
                   <ViewPerformance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/challenge-feedback"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <ChallengeFeedback />
                 </ProtectedRoute>
               }
             />
@@ -309,6 +325,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/coach/feedback-analytics"
+              element={
+                <ProtectedRoute allowedRoles={['coach', 'admin']}>
+                  <FeedbackAnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Protected Admin Portal Routes */}
             <Route
@@ -348,6 +372,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'coach']}>
                   <CreateCapstoneGroup />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/feedback-analytics"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                  <FeedbackAnalyticsDashboard />
                 </ProtectedRoute>
               }
             />

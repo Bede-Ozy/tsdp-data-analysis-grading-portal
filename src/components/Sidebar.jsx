@@ -21,6 +21,8 @@ import {
   FileBarChart,
   Layers,
   BookOpen,
+  HelpCircle,
+  BarChart3,
   X
 } from 'lucide-react';
 
@@ -34,6 +36,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/student/submit-module-project', label: 'Submit Module Project', icon: FolderArchive },
     { to: '/student/submit-social-media', label: 'Submit Social Media', icon: Share2 },
     { to: '/student/performance', label: 'My Performance', icon: TrendingUp },
+    { to: '/student/challenge-feedback', label: 'Challenge Feedback', icon: HelpCircle },
   ];
 
   const coachLinks = [
@@ -45,6 +48,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/coach/grade-presentations', label: 'Grade Presentations', icon: Users },
     { to: '/coach/soft-skills', label: 'Soft Skills Evaluation', icon: Smile },
     { to: '/coach/approve-social-media', label: 'Approve Social Media', icon: CheckCircle },
+    { to: '/coach/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
   ];
 
   const adminLinks = [
@@ -53,6 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/admin/coaches', label: 'Manage Coaches', icon: UserCheck },
     { to: '/admin/create-capstone-group', label: 'Create Capstone Group', icon: Layers },
     { to: '/admin/reports', label: 'Performance Reports', icon: FileBarChart },
+    { to: '/admin/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
   ];
 
   let links = [];

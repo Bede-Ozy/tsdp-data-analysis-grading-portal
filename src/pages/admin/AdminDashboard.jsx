@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   FileBarChart,
+  BarChart3,
   Layers,
   PlusCircle,
   Download,
@@ -708,6 +709,14 @@ export default function AdminDashboard() {
             >
               <FileBarChart className="w-3.5 h-3.5" />
               <span>Performance Reports</span>
+            </Link>
+
+            <Link
+              to="/admin/feedback-analytics"
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Challenge Feedback KPIs</span>
             </Link>
           </div>
         </div>

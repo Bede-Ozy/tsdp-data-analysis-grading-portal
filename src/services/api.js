@@ -487,3 +487,280 @@ export async function getCohortAttendanceMap(studentIDs = [], forceRefresh = fal
 
   return attendanceMap;
 }
+
+// =========================================================================
+// Challenge Feedback & Program Round-Up Review API Endpoints
+// =========================================================================
+const FEEDBACK_STORAGE_KEY = 'tsdp_challenge_feedback_responses';
+const FEEDBACK_SHEET_KEY = 'tsdp_feedback_sheet_id';
+
+/**
+ * Returns the configured target Google Sheet ID for Challenge Feedback.
+ * Priority: localStorage override > import.meta.env.VITE_FEEDBACK_SHEET_ID > Sheet_ID > fallback
+ */
+export function getFeedbackSheetId() {
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(FEEDBACK_SHEET_KEY);
+      if (stored && stored.trim()) return stored.trim();
+    }
+  } catch (e) {}
+
+  const envId = import.meta.env.VITE_FEEDBACK_SHEET_ID ||
+                import.meta.env.Sheet_ID ||
+                import.meta.env.SHEET_ID ||
+                import.meta.env.VITE_SHEET_ID;
+  if (envId && envId.trim()) return envId.trim();
+
+  return '';
+}
+
+/**
+ * Persists a target Google Sheet ID in local storage for quick configuration
+ */
+export function setFeedbackSheetId(sheetId) {
+  try {
+    if (typeof window !== 'undefined') {
+      if (sheetId && sheetId.trim()) {
+        localStorage.setItem(FEEDBACK_SHEET_KEY, sheetId.trim());
+      } else {
+        localStorage.removeItem(FEEDBACK_SHEET_KEY);
+      }
+    }
+  } catch (e) {}
+}
+
+/**
+ * Empty default feedback list (all dummy data removed so only live responses appear)
+ */
+export const DEFAULT_MOCK_FEEDBACK = [];
+
+/**
+ * Clears locally cached feedback responses
+ */
+export function clearFeedbackResponses() {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(FEEDBACK_STORAGE_KEY);
+    }
+  } catch (e) {}
+}
+
+/**
+ * Submits student challenge feedback to the target Google Sheet.
+ * Also persists locally to ensure submissions are immediately visible in dashboard.
+ */
+export async function submitChallengeFeedback(feedbackData, customSheetId = '') {
+  const targetSheetId = (customSheetId || getFeedbackSheetId() || '').trim();
+  
+  const record = {
+    id: feedbackData.id || `FB-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    submittedAt: new Date().toLocaleString(),
+    studentID: feedbackData.studentID || '',
+    studentNumber: feedbackData.studentNumber || '',
+    studentName: feedbackData.studentName || '',
+    email: feedbackData.email || '',
+    classGroup: feedbackData.classGroup || '',
+    
+    // 9 Exact Learning Needs & Revision Questions
+    modulesNeeded: Array.isArray(feedbackData.modulesNeeded) 
+      ? feedbackData.modulesNeeded 
+      : (feedbackData.primaryModule ? [feedbackData.primaryModule] : []),
+    difficultTopics: (feedbackData.difficultTopics || feedbackData.detailedChallenges || '').trim(),
+    theoryVsPractical: (feedbackData.theoryVsPractical || '').trim(),
+    revisitTopics: (feedbackData.revisitTopics || (Array.isArray(feedbackData.topicsToReview) ? feedbackData.topicsToReview.join(', ') : '') || '').trim(),
+    practicalChallenges: Array.isArray(feedbackData.practicalChallenges) 
+      ? feedbackData.practicalChallenges 
+      : (feedbackData.challengeTypes || []),
+    confidenceExcel: Number(feedbackData.confidenceExcel || feedbackData.confidenceScore || 3),
+    confidenceSql: Number(feedbackData.confidenceSql || feedbackData.confidenceScore || 3),
+    confidencePowerBi: Number(feedbackData.confidencePowerBi || feedbackData.confidenceScore || 3),
+    confidenceScore: Number(feedbackData.confidenceScore || 3),
+    confidenceLabel: feedbackData.confidenceLabel || '',
+    demonstrationAreas: (feedbackData.demonstrationAreas || feedbackData.specificQuestions || '').trim(),
+    preferredLearningApproach: feedbackData.preferredLearningApproach || (Array.isArray(feedbackData.preferredReviewFormats) ? feedbackData.preferredReviewFormats[0] : '') || '',
+    additionalFeedback: (feedbackData.additionalFeedback || feedbackData.suggestions || '').trim(),
+
+    // Backward compatibility aliases for older 17-column Apps Script schemas
+    primaryModule: Array.isArray(feedbackData.modulesNeeded) ? feedbackData.modulesNeeded.join(', ') : '',
+    topicsToReview: (feedbackData.revisitTopics || feedbackData.theoryVsPractical) ? [(feedbackData.revisitTopics || ''), (feedbackData.theoryVsPractical || '')].filter(Boolean) : [],
+    challengeTypes: Array.isArray(feedbackData.practicalChallenges) ? feedbackData.practicalChallenges : [],
+    detailedChallenges: (feedbackData.difficultTopics || '').trim(),
+    preferredReviewFormats: feedbackData.preferredLearningApproach ? [feedbackData.preferredLearningApproach] : [],
+    specificQuestions: (feedbackData.demonstrationAreas || '').trim(),
+    suggestions: (feedbackData.additionalFeedback || '').trim(),
+
+    urgency: feedbackData.urgency || (Number(feedbackData.confidenceScore || 3) <= 2 ? 'Urgent' : (Number(feedbackData.confidenceScore || 3) === 3 ? 'Important' : 'Normal')),
+    status: feedbackData.status || 'Pending Review',
+    coachNotes: feedbackData.coachNotes || '',
+    targetSheetId: targetSheetId
+  };
+
+  // 1. Save to local storage for instant dashboard updates
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+      let list = raw ? JSON.parse(raw) : [];
+      // Filter out any legacy dummy mock records
+      list = Array.isArray(list) ? list.filter(item => !item.id?.startsWith('FB-2026-00')) : [];
+      
+      // If student already submitted, replace or prepend
+      const existingIdx = list.findIndex(item => 
+        (item.studentID && item.studentID === record.studentID) || 
+        (item.studentNumber && item.studentNumber === record.studentNumber)
+      );
+
+      if (existingIdx >= 0) {
+        list[existingIdx] = { ...list[existingIdx], ...record };
+      } else {
+        list.unshift(record);
+      }
+
+      localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn('LocalStorage error while saving feedback:', e);
+  }
+
+  // 2. Transmit to Google Apps Script backend if configured
+  try {
+    const res = await callApi('submitChallengeFeedback', [record, targetSheetId]);
+    if (res && res.success) {
+      return {
+        success: true,
+        savedToSheet: true,
+        message: 'Your challenge feedback was submitted successfully to the database!',
+        data: res.data || record
+      };
+    } else if (res && res.success === false) {
+      console.warn('Backend rejected submitChallengeFeedback:', res.message);
+      return {
+        success: false,
+        savedToSheet: false,
+        savedLocally: true,
+        isNotAllowed: Boolean(res.message && res.message.includes('Function not allowed')),
+        message: res.message || 'Google Sheet backend rejected the submission.',
+        data: record
+      };
+    }
+  } catch (err) {
+    console.warn('Backend submitChallengeFeedback call failed, saved locally:', err);
+    return {
+      success: false,
+      savedToSheet: false,
+      savedLocally: true,
+      message: err?.message || 'Network error while submitting to Google Sheet.',
+      data: record
+    };
+  }
+
+  // Local-only save fallback when no targetSheetId configured
+  return {
+    success: true,
+    savedToSheet: false,
+    savedLocally: true,
+    message: 'Your challenge feedback has been recorded locally in this browser!',
+    data: record,
+    isLocalOnly: true
+  };
+}
+
+/**
+ * Retrieves the full list of Challenge Feedback responses.
+ * Reads from Google Apps Script if available, merging with any locally recorded submissions.
+ * Returns only genuine live submissions (dummy data strictly removed).
+ */
+export async function getChallengeFeedbackList(customSheetId = '', forceRefresh = false) {
+  const targetSheetId = (customSheetId || getFeedbackSheetId() || '').trim();
+
+  // 1. Try to read from backend
+  let remoteList = null;
+  if (targetSheetId) {
+    try {
+      const res = await callApi('getChallengeFeedbackList', [targetSheetId]);
+      if (res && res.success && Array.isArray(res.data)) {
+        remoteList = res.data.filter(item => !item.id?.startsWith('FB-2026-00'));
+      }
+    } catch (err) {
+      console.warn('Error fetching remote challenge feedback:', err);
+    }
+  }
+
+  // 2. Read from LocalStorage (purging legacy dummy records)
+  let localList = [];
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Automatically purge any dummy mock data from previous sessions
+        localList = Array.isArray(parsed)
+          ? parsed.filter(item => !item.id?.startsWith('FB-2026-00'))
+          : [];
+        localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(localList));
+      } else {
+        localList = [];
+      }
+    }
+  } catch (e) {
+    localList = [];
+  }
+
+  // 3. Merge remote and local without duplicate IDs
+  const combinedMap = new Map();
+
+  if (Array.isArray(remoteList)) {
+    remoteList.forEach(item => {
+      const key = item.id || `${item.studentID}_${item.timestamp}`;
+      combinedMap.set(key, item);
+    });
+  }
+
+  localList.forEach(item => {
+    const key = item.id || `${item.studentID}_${item.timestamp}`;
+    if (!combinedMap.has(key)) {
+      combinedMap.set(key, item);
+    }
+  });
+
+  const finalResults = Array.from(combinedMap.values()).sort((a, b) => {
+    return new Date(b.timestamp || b.submittedAt) - new Date(a.timestamp || a.submittedAt);
+  });
+
+  return {
+    success: true,
+    data: finalResults,
+    sheetId: targetSheetId,
+    totalResponses: finalResults.length
+  };
+}
+
+/**
+ * Updates review status or coach notes on a feedback item
+ */
+export async function updateFeedbackReviewStatus(feedbackId, newStatus, coachNotes = '') {
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+      let list = raw ? JSON.parse(raw) : [];
+      list = list.filter(item => !item.id?.startsWith('FB-2026-00'));
+      const idx = list.findIndex(item => item.id === feedbackId);
+      if (idx >= 0) {
+        list[idx].status = newStatus;
+        if (coachNotes !== undefined) list[idx].coachNotes = coachNotes;
+        localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(list));
+      }
+    }
+  } catch (e) {}
+
+  const targetSheetId = getFeedbackSheetId();
+  if (targetSheetId) {
+    try {
+      await callApi('updateFeedbackReviewStatus', [feedbackId, newStatus, coachNotes, targetSheetId]);
+    } catch (e) {}
+  }
+
+  return { success: true };
+}
+

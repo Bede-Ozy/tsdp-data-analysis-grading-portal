@@ -404,6 +404,13 @@ export default function CoachDashboard() {
                 <QrCode className="w-4 h-4" />
                 <span>Attendance Code</span>
               </Link>
+              <Link
+                to="/coach/feedback-analytics"
+                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl border border-orange-400/40 backdrop-blur-xs transition-all flex items-center gap-2 text-xs shadow-xs"
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Review & Feedback KPIs</span>
+              </Link>
             </div>
           </div>
         </div>
