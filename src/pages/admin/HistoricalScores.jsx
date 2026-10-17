@@ -13,25 +13,23 @@ import {
   AlertCircle,
   ArrowLeft,
   Users,
-  Award,
-  Calculator,
-  Info,
-  Check
+  Calculator
 } from 'lucide-react';
 
 export default function HistoricalScores() {
   const { user } = useAuth();
   const coachID = user?.coachID || user?.id || user?.adminID || user?.username || 'ADMIN';
 
-  // Data states
+  // Student roster
   const [students, setStudents] = useState([]);
-  const [attPercent, setAttPercent] = useState({});
-  const [techPercent, setTechPercent] = useState({});
-  const [profPercent, setProfPercent] = useState({});
-  const [classActPercent, setClassActPercent] = useState({});
-  const [socialPercent, setSocialPercent] = useState({});
 
-  // UI states
+  // Monthly raw score inputs & maxes keyed by studentID
+  const [month1Scores, setMonth1Scores] = useState({});
+  const [month2Scores, setMonth2Scores] = useState({});
+  const [month1Maxes, setMonth1Maxes] = useState({});
+  const [month2Maxes, setMonth2Maxes] = useState({});
+
+  // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +38,7 @@ export default function HistoricalScores() {
   const [notification, setNotification] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Load students & historical scores
+  // Load students & existing historical scores
   const loadData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
@@ -55,7 +53,7 @@ export default function HistoricalScores() {
       const stdList = Array.isArray(studentsRes)
         ? studentsRes
         : (studentsRes?.data || studentsRes?.students || []);
-      
+
       const histList = Array.isArray(histRes)
         ? histRes
         : (histRes?.data || histRes?.scores || histRes?.historicalScores || []);
@@ -69,51 +67,69 @@ export default function HistoricalScores() {
         });
       }
 
-      // Initialize percentage state for each student
-      const newAtt = {};
-      const newTech = {};
-      const newProf = {};
-      const newClassAct = {};
-      const newSocial = {};
+      // Also read local cache if available as immediate fallback
+      let localCacheMap = new Map();
+      try {
+        const raw = localStorage.getItem('tsdp_historical_scores_cache');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item) => {
+              const id = String(item.studentID || '').trim().toLowerCase();
+              if (id) localCacheMap.set(id, item);
+            });
+          }
+        }
+      } catch (e) {
+        // Ignore storage parse errors
+      }
+
+      const newM1 = {};
+      const newM2 = {};
+      const newM1Max = {};
+      const newM2Max = {};
 
       stdList.forEach((s) => {
         const sKey = String(s.studentID || s.id || '').trim().toLowerCase();
-        const saved = histMap.get(sKey);
+        const saved = histMap.get(sKey) || localCacheMap.get(sKey);
 
         if (saved) {
-          // Saved points conversion:
-          // Attendance% = (histAttendance / 10) * 100
-          // Technical% = (histTechnical / 10) * 100
-          // Professional% = (histProfessional / 5) * 100
-          // ClassActivities% = (histClassActivities / 5) * 100
-          // SocialMedia% = (histSocialMedia / 5) * 100
-          const hAtt = Number(saved.histAttendance ?? saved.attendance ?? 0);
-          const hTech = Number(saved.histTechnical ?? saved.technical ?? 0);
-          const hProf = Number(saved.histProfessional ?? saved.professional ?? 0);
-          const hClass = Number(saved.histClassActivities ?? saved.classActivities ?? 0);
-          const hSocial = Number(saved.histSocialMedia ?? saved.socialMedia ?? 0);
+          // If monthly totals and maxes are stored directly
+          if (saved.month1Total !== undefined || saved.month2Total !== undefined) {
+            newM1[s.studentID] = saved.month1Total ?? 0;
+            newM2[s.studentID] = saved.month2Total ?? 0;
+            newM1Max[s.studentID] = saved.month1Max !== undefined && saved.month1Max !== '' ? Number(saved.month1Max) : 100;
+            newM2Max[s.studentID] = saved.month2Max !== undefined && saved.month2Max !== '' ? Number(saved.month2Max) : 100;
+          } else if (saved.histAttendance !== undefined || saved.historicalPercent !== undefined) {
+            // Reconstruct from saved percentage or component points
+            const pct = saved.historicalPercent !== undefined
+              ? Number(saved.historicalPercent)
+              : (saved.histAttendance ? (Number(saved.histAttendance) / 10) * 100 : 0);
 
-          newAtt[s.studentID] = hAtt > 0 ? Math.round(((hAtt / 10) * 100) * 100) / 100 : 0;
-          newTech[s.studentID] = hTech > 0 ? Math.round(((hTech / 10) * 100) * 100) / 100 : 0;
-          newProf[s.studentID] = hProf > 0 ? Math.round(((hProf / 5) * 100) * 100) / 100 : 0;
-          newClassAct[s.studentID] = hClass > 0 ? Math.round(((hClass / 5) * 100) * 100) / 100 : 0;
-          newSocial[s.studentID] = hSocial > 0 ? Math.round(((hSocial / 5) * 100) * 100) / 100 : 0;
+            newM1[s.studentID] = Math.round((pct * 100) / 100);
+            newM2[s.studentID] = 0;
+            newM1Max[s.studentID] = 100;
+            newM2Max[s.studentID] = 0;
+          } else {
+            newM1[s.studentID] = 0;
+            newM2[s.studentID] = 0;
+            newM1Max[s.studentID] = 100;
+            newM2Max[s.studentID] = 100;
+          }
         } else {
-          // Default all to 0
-          newAtt[s.studentID] = 0;
-          newTech[s.studentID] = 0;
-          newProf[s.studentID] = 0;
-          newClassAct[s.studentID] = 0;
-          newSocial[s.studentID] = 0;
+          // Defaults
+          newM1[s.studentID] = 0;
+          newM2[s.studentID] = 0;
+          newM1Max[s.studentID] = 100;
+          newM2Max[s.studentID] = 100;
         }
       });
 
       setStudents(stdList);
-      setAttPercent(newAtt);
-      setTechPercent(newTech);
-      setProfPercent(newProf);
-      setClassActPercent(newClassAct);
-      setSocialPercent(newSocial);
+      setMonth1Scores(newM1);
+      setMonth2Scores(newM2);
+      setMonth1Maxes(newM1Max);
+      setMonth2Maxes(newM2Max);
       setHasUnsavedChanges(false);
 
       if (isManual) {
@@ -138,23 +154,42 @@ export default function HistoricalScores() {
     loadData();
   }, []);
 
-  // Compute live points helpers (rounded to 2 decimals)
-  const calcAttPts = (pct) => (((Number(pct) || 0) / 100) * 10).toFixed(2);
-  const calcTechPts = (pct) => (((Number(pct) || 0) / 100) * 10).toFixed(2);
-  const calcProfPts = (pct) => (((Number(pct) || 0) / 100) * 5).toFixed(2);
-  const calcClassActPts = (pct) => (((Number(pct) || 0) / 100) * 5).toFixed(2);
-  const calcSocialPts = (pct) => (((Number(pct) || 0) / 100) * 5).toFixed(2);
+  // Live calculation for a student
+  const computeStudentScores = (studentID) => {
+    const m1 = month1Scores[studentID] !== undefined && month1Scores[studentID] !== '' ? Number(month1Scores[studentID]) : 0;
+    const m2 = month2Scores[studentID] !== undefined && month2Scores[studentID] !== '' ? Number(month2Scores[studentID]) : 0;
+    const m1Max = month1Maxes[studentID] !== undefined && month1Maxes[studentID] !== '' ? Number(month1Maxes[studentID]) : 100;
+    const m2Max = month2Maxes[studentID] !== undefined && month2Maxes[studentID] !== '' ? Number(month2Maxes[studentID]) : 100;
 
-  // Input change handler with 0-100 clamp
-  const handlePercentChange = (setter, studentID, rawVal) => {
-    let val = rawVal === '' ? '' : Number(rawVal);
-    if (val !== '' && !isNaN(val)) {
-      if (val < 0) val = 0;
-      if (val > 100) val = 100;
-    }
+    const total = m1 + m2;
+    const max = m1Max + m2Max;
+    const percent = max > 0 ? (total / max) * 100 : 0;
+
+    const attPts = ((percent / 100) * 10).toFixed(2);
+    const techPts = ((percent / 100) * 10).toFixed(2);
+    const profPts = ((percent / 100) * 5).toFixed(2);
+    const classPts = ((percent / 100) * 5).toFixed(2);
+    const smPts = ((percent / 100) * 5).toFixed(2);
+
+    return {
+      total,
+      max,
+      percent: Number(percent.toFixed(2)),
+      percentFormatted: `${percent.toFixed(2)}%`,
+      attPts,
+      techPts,
+      profPts,
+      classPts,
+      smPts
+    };
+  };
+
+  // Input change handler
+  const handleScoreChange = (setter, studentID, val) => {
+    const parsed = val === '' ? '' : Number(val);
     setter((prev) => ({
       ...prev,
-      [studentID]: val
+      [studentID]: parsed
     }));
     setHasUnsavedChanges(true);
   };
@@ -181,6 +216,19 @@ export default function HistoricalScores() {
     });
   }, [students, search, groupFilter]);
 
+  // Set all maxes to 100 shortcut
+  const handleSetAllDefaultMaxes = () => {
+    const newM1Max = {};
+    const newM2Max = {};
+    students.forEach((s) => {
+      newM1Max[s.studentID] = 100;
+      newM2Max[s.studentID] = 100;
+    });
+    setMonth1Maxes(newM1Max);
+    setMonth2Maxes(newM2Max);
+    setHasUnsavedChanges(true);
+  };
+
   // Save All Historical Scores
   const handleSaveAll = async () => {
     setSaving(true);
@@ -188,31 +236,34 @@ export default function HistoricalScores() {
 
     try {
       const scoresArray = students.map((s) => {
-        const attVal = Number(attPercent[s.studentID]) || 0;
-        const techVal = Number(techPercent[s.studentID]) || 0;
-        const profVal = Number(profPercent[s.studentID]) || 0;
-        const classActVal = Number(classActPercent[s.studentID]) || 0;
-        const socialVal = Number(socialPercent[s.studentID]) || 0;
+        const computed = computeStudentScores(s.studentID);
+        const m1 = month1Scores[s.studentID] !== undefined && month1Scores[s.studentID] !== '' ? Number(month1Scores[s.studentID]) : 0;
+        const m2 = month2Scores[s.studentID] !== undefined && month2Scores[s.studentID] !== '' ? Number(month2Scores[s.studentID]) : 0;
+        const m1Max = month1Maxes[s.studentID] !== undefined && month1Maxes[s.studentID] !== '' ? Number(month1Maxes[s.studentID]) : 100;
+        const m2Max = month2Maxes[s.studentID] !== undefined && month2Maxes[s.studentID] !== '' ? Number(month2Maxes[s.studentID]) : 100;
 
         return {
           studentID: s.studentID,
           firstName: s.firstName || (s.name ? s.name.split(' ')[0] : '') || '',
           lastName: s.lastName || (s.name ? s.name.split(' ').slice(1).join(' ') : '') || '',
-          histAttendance: Number(((attVal / 100) * 10).toFixed(2)),
-          histTechnical: Number(((techVal / 100) * 10).toFixed(2)),
-          histProfessional: Number(((profVal / 100) * 5).toFixed(2)),
-          histClassActivities: Number(((classActVal / 100) * 5).toFixed(2)),
-          histSocialMedia: Number(((socialVal / 100) * 5).toFixed(2)),
+          month1Total: m1,
+          month2Total: m2,
+          month1Max: m1Max,
+          month2Max: m2Max,
+          historicalPercent: computed.percent,
+          histAttendance: Number(computed.attPts),
+          histTechnical: Number(computed.techPts),
+          histProfessional: Number(computed.profPts),
+          histClassActivities: Number(computed.classPts),
+          histSocialMedia: Number(computed.smPts),
           notes: ''
         };
       });
 
-      // Save to localStorage as immediate offline cache
+      // Cache locally for offline resilience
       try {
         localStorage.setItem('tsdp_historical_scores_cache', JSON.stringify(scoresArray));
-      } catch (e) {
-        // Ignore storage errors
-      }
+      } catch (e) {}
 
       // Call backend API
       const res = await saveHistoricalScores(scoresArray, coachID);
@@ -223,7 +274,7 @@ export default function HistoricalScores() {
           message: res.message || `Updated ${scoresArray.length} students`
         });
         setHasUnsavedChanges(false);
-        // Reload data from backend to confirm as requested
+        // Reload data from backend to confirm
         await loadData(false);
       } else {
         setNotification({
@@ -273,7 +324,7 @@ export default function HistoricalScores() {
           </p>
         </div>
 
-        {/* Action Controls Suite */}
+        {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
           <button
             type="button"
@@ -300,56 +351,37 @@ export default function HistoricalScores() {
         </div>
       </div>
 
-      {/* Component Formula Legend Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="bg-teal-50/70 border border-teal-200/80 rounded-xl p-3">
-          <div className="flex items-center justify-between text-teal-800 text-xs font-bold">
-            <span>Attendance</span>
-            <span className="bg-teal-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">10 Pts</span>
+      {/* Live Calculation Formula Card */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-800">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
+              <Calculator className="w-4 h-4" />
+              <span>Live Calculation Formula</span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Combined % = <span className="text-white font-mono font-bold">((Month 1 + Month 2) ÷ (Month 1 Max + Month 2 Max)) × 100</span>
+            </p>
           </div>
-          <p className="text-[11px] text-teal-700 mt-1 font-mono">
-            (Att% ÷ 100) × 10
-          </p>
-        </div>
 
-        <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3">
-          <div className="flex items-center justify-between text-blue-800 text-xs font-bold">
-            <span>Technical</span>
-            <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">10 Pts</span>
+          {/* Component Point Multipliers */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="bg-teal-500/20 border border-teal-400/30 text-teal-200 px-2.5 py-1 rounded-lg font-mono">
+              Att: <strong>% × 10</strong>
+            </span>
+            <span className="bg-blue-500/20 border border-blue-400/30 text-blue-200 px-2.5 py-1 rounded-lg font-mono">
+              Tech: <strong>% × 10</strong>
+            </span>
+            <span className="bg-orange-500/20 border border-orange-400/30 text-orange-200 px-2.5 py-1 rounded-lg font-mono">
+              Prof: <strong>% × 5</strong>
+            </span>
+            <span className="bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 px-2.5 py-1 rounded-lg font-mono">
+              Class Act: <strong>% × 5</strong>
+            </span>
+            <span className="bg-purple-500/20 border border-purple-400/30 text-purple-200 px-2.5 py-1 rounded-lg font-mono">
+              SM: <strong>% × 5</strong>
+            </span>
           </div>
-          <p className="text-[11px] text-blue-700 mt-1 font-mono">
-            (Tech% ÷ 100) × 10
-          </p>
-        </div>
-
-        <div className="bg-orange-50/70 border border-orange-200/80 rounded-xl p-3">
-          <div className="flex items-center justify-between text-orange-800 text-xs font-bold">
-            <span>Professional</span>
-            <span className="bg-orange-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">5 Pts</span>
-          </div>
-          <p className="text-[11px] text-orange-700 mt-1 font-mono">
-            (Prof% ÷ 100) × 5
-          </p>
-        </div>
-
-        <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3">
-          <div className="flex items-center justify-between text-indigo-800 text-xs font-bold">
-            <span>Class Activities</span>
-            <span className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">5 Pts</span>
-          </div>
-          <p className="text-[11px] text-indigo-700 mt-1 font-mono">
-            (ClassAct% ÷ 100) × 5
-          </p>
-        </div>
-
-        <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-3 col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-purple-800 text-xs font-bold">
-            <span>Social Media</span>
-            <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">5 Pts</span>
-          </div>
-          <p className="text-[11px] text-purple-700 mt-1 font-mono">
-            (Social% ÷ 100) × 5
-          </p>
         </div>
       </div>
 
@@ -380,12 +412,12 @@ export default function HistoricalScores() {
         </div>
       )}
 
-      {/* Unsaved Changes Floating Notice */}
+      {/* Unsaved Changes Banner */}
       {hasUnsavedChanges && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-900">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="font-semibold">You have unsaved historical score edits.</span>
+            <span className="font-semibold">You have unsaved monthly score edits.</span>
             <span className="hidden sm:inline text-amber-700">Remember to click "Save All Historical Scores" before leaving.</span>
           </div>
           <button
@@ -413,8 +445,17 @@ export default function HistoricalScores() {
           />
         </div>
 
-        {/* Group Filter & Counts */}
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        {/* Group Filter & Defaults */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+          <button
+            type="button"
+            onClick={handleSetAllDefaultMaxes}
+            className="text-xs text-slate-600 hover:text-brand-primary border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 transition-colors"
+            title="Reset all student maxes to 100 / 100"
+          >
+            Reset All Maxes (100 / 100)
+          </button>
+
           <div className="flex items-center gap-2">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
@@ -441,59 +482,55 @@ export default function HistoricalScores() {
           <div className="py-20 flex flex-col items-center justify-center gap-3">
             <LoadingSpinner size="lg" />
             <p className="text-xs font-semibold text-slate-500 animate-pulse">
-              Loading student roster and historical scores...
+              Loading student roster and monthly scores...
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-100/80 border-b border-brand-neutral-border text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                <tr className="bg-slate-100/90 border-b border-brand-neutral-border text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3.5 px-4 sticky left-0 bg-slate-100/95 z-10 min-w-[170px]">
                     Student Name
                   </th>
-                  <th className="py-3.5 px-4 min-w-[110px]">
+                  <th className="py-3.5 px-4 min-w-[105px]">
                     Student ID
                   </th>
 
-                  {/* Attendance */}
-                  <th className="py-3.5 px-3 bg-teal-50/50 text-teal-900 text-center border-l border-teal-100 min-w-[85px]">
-                    Attendance %
+                  {/* Monthly Score Inputs (Editable) */}
+                  <th className="py-3.5 px-3 bg-amber-50/60 text-amber-900 text-center border-l border-amber-200/60 min-w-[90px]">
+                    Month 1 Total
                   </th>
-                  <th className="py-3.5 px-3 bg-teal-50/50 text-teal-900 text-center min-w-[75px]">
+                  <th className="py-3.5 px-3 bg-amber-50/60 text-amber-900 text-center min-w-[90px]">
+                    Month 2 Total
+                  </th>
+                  <th className="py-3.5 px-3 bg-amber-50/60 text-amber-900 text-center min-w-[85px]">
+                    Month 1 Max
+                  </th>
+                  <th className="py-3.5 px-3 bg-amber-50/60 text-amber-900 text-center min-w-[85px]">
+                    Month 2 Max
+                  </th>
+
+                  {/* Historical Combined % (Auto Computed) */}
+                  <th className="py-3.5 px-3 bg-indigo-50/70 text-indigo-900 text-center border-l border-indigo-200/80 min-w-[100px]">
+                    Historical %
+                  </th>
+
+                  {/* 5 Computed Component Points (Auto Computed) */}
+                  <th className="py-3.5 px-2.5 bg-teal-50/50 text-teal-900 text-center border-l border-teal-100 min-w-[70px]">
                     Att Pts
                   </th>
-
-                  {/* Technical */}
-                  <th className="py-3.5 px-3 bg-blue-50/50 text-blue-900 text-center border-l border-blue-100 min-w-[85px]">
-                    Technical %
-                  </th>
-                  <th className="py-3.5 px-3 bg-blue-50/50 text-blue-900 text-center min-w-[75px]">
+                  <th className="py-3.5 px-2.5 bg-blue-50/50 text-blue-900 text-center min-w-[70px]">
                     Tech Pts
                   </th>
-
-                  {/* Professional */}
-                  <th className="py-3.5 px-3 bg-orange-50/50 text-orange-900 text-center border-l border-orange-100 min-w-[85px]">
-                    Professional %
-                  </th>
-                  <th className="py-3.5 px-3 bg-orange-50/50 text-orange-900 text-center min-w-[75px]">
+                  <th className="py-3.5 px-2.5 bg-orange-50/50 text-orange-900 text-center min-w-[70px]">
                     Prof Pts
                   </th>
-
-                  {/* Class Activities */}
-                  <th className="py-3.5 px-3 bg-indigo-50/50 text-indigo-900 text-center border-l border-indigo-100 min-w-[85px]">
-                    Class Act %
-                  </th>
-                  <th className="py-3.5 px-3 bg-indigo-50/50 text-indigo-900 text-center min-w-[75px]">
+                  <th className="py-3.5 px-2.5 bg-indigo-50/50 text-indigo-900 text-center min-w-[70px]">
                     Class Act Pts
                   </th>
-
-                  {/* Social Media */}
-                  <th className="py-3.5 px-3 bg-purple-50/50 text-purple-900 text-center border-l border-purple-100 min-w-[85px]">
-                    Social Media %
-                  </th>
-                  <th className="py-3.5 px-3 bg-purple-50/50 text-purple-900 text-center min-w-[75px]">
-                    Social Media Pts
+                  <th className="py-3.5 px-2.5 bg-purple-50/50 text-purple-900 text-center min-w-[70px]">
+                    SM Pts
                   </th>
                 </tr>
               </thead>
@@ -507,11 +544,21 @@ export default function HistoricalScores() {
                 ) : (
                   filteredStudents.map((s) => {
                     const sName = s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.studentID;
-                    const attVal = attPercent[s.studentID] ?? 0;
-                    const techVal = techPercent[s.studentID] ?? 0;
-                    const profVal = profPercent[s.studentID] ?? 0;
-                    const classActVal = classActPercent[s.studentID] ?? 0;
-                    const socialVal = socialPercent[s.studentID] ?? 0;
+                    const m1Val = month1Scores[s.studentID] ?? 0;
+                    const m2Val = month2Scores[s.studentID] ?? 0;
+                    const m1MaxVal = month1Maxes[s.studentID] ?? 100;
+                    const m2MaxVal = month2Maxes[s.studentID] ?? 100;
+
+                    const computed = computeStudentScores(s.studentID);
+
+                    // Badge color based on computed percentage
+                    const getBadgeClass = (pct) => {
+                      if (pct >= 80) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      if (pct >= 60) return 'bg-blue-50 text-blue-700 border-blue-200';
+                      if (pct >= 40) return 'bg-amber-50 text-amber-700 border-amber-200';
+                      if (pct > 0) return 'bg-rose-50 text-rose-700 border-rose-200';
+                      return 'bg-slate-100 text-slate-500 border-slate-200';
+                    };
 
                     return (
                       <tr key={s.studentID} className="hover:bg-slate-50/80 transition-colors">
@@ -532,118 +579,126 @@ export default function HistoricalScores() {
                           {s.studentID}
                         </td>
 
-                        {/* Attendance % */}
-                        <td className="py-2.5 px-3 text-center border-l border-slate-100 bg-teal-50/20">
+                        {/* Month 1 Total (Editable) */}
+                        <td className="py-2.5 px-3 text-center border-l border-amber-100 bg-amber-50/15">
                           <input
                             type="number"
                             min="0"
-                            max="100"
                             step="any"
-                            value={attVal}
-                            onChange={(e) => handlePercentChange(setAttPercent, s.studentID, e.target.value)}
-                            className="w-16 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-teal-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 text-xs"
-                          />
-                        </td>
-                        {/* Att Pts (Disabled) */}
-                        <td className="py-2.5 px-3 text-center bg-teal-50/20">
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={calcAttPts(attVal)}
-                            className="w-14 px-1.5 py-1 text-center font-mono font-bold text-teal-800 bg-teal-100/60 border border-teal-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            value={m1Val}
+                            onChange={(e) => handleScoreChange(setMonth1Scores, s.studentID, e.target.value)}
+                            placeholder="0"
+                            className="w-18 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-xs"
                           />
                         </td>
 
-                        {/* Technical % */}
-                        <td className="py-2.5 px-3 text-center border-l border-slate-100 bg-blue-50/20">
+                        {/* Month 2 Total (Editable) */}
+                        <td className="py-2.5 px-3 text-center bg-amber-50/15">
                           <input
                             type="number"
                             min="0"
-                            max="100"
                             step="any"
-                            value={techVal}
-                            onChange={(e) => handlePercentChange(setTechPercent, s.studentID, e.target.value)}
-                            className="w-16 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-xs"
-                          />
-                        </td>
-                        {/* Tech Pts (Disabled) */}
-                        <td className="py-2.5 px-3 text-center bg-blue-50/20">
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={calcTechPts(techVal)}
-                            className="w-14 px-1.5 py-1 text-center font-mono font-bold text-blue-800 bg-blue-100/60 border border-blue-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            value={m2Val}
+                            onChange={(e) => handleScoreChange(setMonth2Scores, s.studentID, e.target.value)}
+                            placeholder="0"
+                            className="w-18 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-xs"
                           />
                         </td>
 
-                        {/* Professional % */}
-                        <td className="py-2.5 px-3 text-center border-l border-slate-100 bg-orange-50/20">
+                        {/* Month 1 Max (Editable, Default 100) */}
+                        <td className="py-2.5 px-3 text-center bg-amber-50/15">
                           <input
                             type="number"
-                            min="0"
-                            max="100"
+                            min="1"
                             step="any"
-                            value={profVal}
-                            onChange={(e) => handlePercentChange(setProfPercent, s.studentID, e.target.value)}
-                            className="w-16 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-orange-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 text-xs"
-                          />
-                        </td>
-                        {/* Prof Pts (Disabled) */}
-                        <td className="py-2.5 px-3 text-center bg-orange-50/20">
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={calcProfPts(profVal)}
-                            className="w-14 px-1.5 py-1 text-center font-mono font-bold text-orange-800 bg-orange-100/60 border border-orange-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            value={m1MaxVal}
+                            onChange={(e) => handleScoreChange(setMonth1Maxes, s.studentID, e.target.value)}
+                            placeholder="100"
+                            className="w-16 px-1.5 py-1 text-center font-mono text-slate-700 bg-white/90 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 text-xs"
                           />
                         </td>
 
-                        {/* Class Activities % */}
-                        <td className="py-2.5 px-3 text-center border-l border-slate-100 bg-indigo-50/20">
+                        {/* Month 2 Max (Editable, Default 100) */}
+                        <td className="py-2.5 px-3 text-center bg-amber-50/15">
                           <input
                             type="number"
                             min="0"
-                            max="100"
                             step="any"
-                            value={classActVal}
-                            onChange={(e) => handlePercentChange(setClassActPercent, s.studentID, e.target.value)}
-                            className="w-16 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-xs"
-                          />
-                        </td>
-                        {/* Class Act Pts (Disabled) */}
-                        <td className="py-2.5 px-3 text-center bg-indigo-50/20">
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={calcClassActPts(classActVal)}
-                            className="w-14 px-1.5 py-1 text-center font-mono font-bold text-indigo-800 bg-indigo-100/60 border border-indigo-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            value={m2MaxVal}
+                            onChange={(e) => handleScoreChange(setMonth2Maxes, s.studentID, e.target.value)}
+                            placeholder="100"
+                            className="w-16 px-1.5 py-1 text-center font-mono text-slate-700 bg-white/90 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 text-xs"
                           />
                         </td>
 
-                        {/* Social Media % */}
-                        <td className="py-2.5 px-3 text-center border-l border-slate-100 bg-purple-50/20">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="any"
-                            value={socialVal}
-                            onChange={(e) => handlePercentChange(setSocialPercent, s.studentID, e.target.value)}
-                            className="w-16 px-2 py-1 text-center font-mono font-semibold text-slate-800 bg-white border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-xs"
-                          />
+                        {/* Historical % (Auto Computed) */}
+                        <td className="py-2.5 px-3 text-center border-l border-indigo-100 bg-indigo-50/20">
+                          <span
+                            className={`inline-block w-20 py-1 px-1.5 text-center font-mono font-bold text-xs rounded-md border ${getBadgeClass(
+                              computed.percent
+                            )}`}
+                          >
+                            {computed.percentFormatted}
+                          </span>
                         </td>
-                        {/* Social Media Pts (Disabled) */}
-                        <td className="py-2.5 px-3 text-center bg-purple-50/20">
+
+                        {/* Att Pts (Auto Computed) */}
+                        <td className="py-2.5 px-2.5 text-center border-l border-teal-100 bg-teal-50/15">
                           <input
                             type="text"
                             readOnly
                             disabled
-                            value={calcSocialPts(socialVal)}
-                            className="w-14 px-1.5 py-1 text-center font-mono font-bold text-purple-800 bg-purple-100/60 border border-purple-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            value={computed.attPts}
+                            className="w-13 px-1 py-1 text-center font-mono font-bold text-teal-800 bg-teal-100/60 border border-teal-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            title={`Attendance: ${computed.attPts} / 10 pts`}
+                          />
+                        </td>
+
+                        {/* Tech Pts (Auto Computed) */}
+                        <td className="py-2.5 px-2.5 text-center bg-blue-50/15">
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={computed.techPts}
+                            className="w-13 px-1 py-1 text-center font-mono font-bold text-blue-800 bg-blue-100/60 border border-blue-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            title={`Technical: ${computed.techPts} / 10 pts`}
+                          />
+                        </td>
+
+                        {/* Prof Pts (Auto Computed) */}
+                        <td className="py-2.5 px-2.5 text-center bg-orange-50/15">
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={computed.profPts}
+                            className="w-13 px-1 py-1 text-center font-mono font-bold text-orange-800 bg-orange-100/60 border border-orange-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            title={`Professional: ${computed.profPts} / 5 pts`}
+                          />
+                        </td>
+
+                        {/* Class Act Pts (Auto Computed) */}
+                        <td className="py-2.5 px-2.5 text-center bg-indigo-50/15">
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={computed.classPts}
+                            className="w-13 px-1 py-1 text-center font-mono font-bold text-indigo-800 bg-indigo-100/60 border border-indigo-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            title={`Class Activities: ${computed.classPts} / 5 pts`}
+                          />
+                        </td>
+
+                        {/* SM Pts (Auto Computed) */}
+                        <td className="py-2.5 px-2.5 text-center bg-purple-50/15">
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={computed.smPts}
+                            className="w-13 px-1 py-1 text-center font-mono font-bold text-purple-800 bg-purple-100/60 border border-purple-200/80 rounded-md cursor-not-allowed select-none text-xs"
+                            title={`Social Media: ${computed.smPts} / 5 pts`}
                           />
                         </td>
                       </tr>
@@ -658,7 +713,7 @@ export default function HistoricalScores() {
         {/* Table Bottom Action Bar */}
         <div className="p-4 bg-slate-50 border-t border-brand-neutral-border flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500">
-            Points are calculated live based on component weights: Attendance (10), Technical (10), Professional (5), Class Activities (5), Social Media (5).
+            Historical % is computed live from Month 1 and Month 2 scores, then weighted into Attendance (10), Technical (10), Professional (5), Class Activities (5), and Social Media (5).
           </div>
 
           <button
