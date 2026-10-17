@@ -73,7 +73,7 @@ export async function callApi(functionName, parameters = [], maxRetries = 3) {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         },
-        timeout: 15000
+        timeout: 35000
       });
 
       let data = response.data;
@@ -113,7 +113,7 @@ export async function callApi(functionName, parameters = [], maxRetries = 3) {
 
       if (isRetryable && attempt <= maxRetries) {
         const waitTime = Math.pow(2, attempt - 1) * 1000;
-        const reason = isTimeout ? 'Timeout (15s)' : (status ? `status: ${status}` : (isNetworkError ? 'Network' : 'Parse/HTML'));
+        const reason = isTimeout ? 'Timeout (35s)' : (status ? `status: ${status}` : (isNetworkError ? 'Network' : 'Parse/HTML'));
         console.warn(`[Retry ${attempt}/${maxRetries}] ${functionName} failed (${reason}). Retrying in ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
@@ -153,7 +153,7 @@ export async function callApi(functionName, parameters = [], maxRetries = 3) {
   if (finalStatus === 404) {
     fallbackMessage = 'Backend temporarily unavailable (cold start). Please try again.';
   } else if (isFinalTimeout) {
-    fallbackMessage = 'Request timed out after 15 seconds. Backend may be cold-starting; please try again.';
+    fallbackMessage = 'Request timed out after 35 seconds. Backend may be cold-starting; please try again.';
   } else if (lastError?.message) {
     fallbackMessage = lastError.message;
   }
@@ -188,14 +188,12 @@ export async function callApiDirect(functionName, parameters = []) {
   };
 
   try {
-    // Apps Script requires text/plain to avoid CORS preflight
+    // Apps Script requires simple text/plain to avoid CORS preflight (OPTIONS)
     const response = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Content-Type': 'text/plain'
       },
       redirect: 'follow'
     });
