@@ -46,6 +46,7 @@ import ManageStudents from './pages/admin/ManageStudents';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
 import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
+import HistoricalScores from './pages/admin/HistoricalScores';
 
 // Documentation & Guide Page
 import PlatformGuide from './pages/PlatformGuide';
@@ -380,6 +381,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'coach']}>
                   <FeedbackAnalyticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/historical-scores"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                  <HistoricalScores />
                 </ProtectedRoute>
               }
             />

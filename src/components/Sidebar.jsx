@@ -23,6 +23,7 @@ import {
   BookOpen,
   HelpCircle,
   BarChart3,
+  History,
   X
 } from 'lucide-react';
 
@@ -55,6 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/admin/dashboard', label: 'Cohort Overview', icon: LayoutDashboard },
     { to: '/admin/students', label: 'Manage Residents', icon: Users },
     { to: '/admin/coaches', label: 'Manage Coaches', icon: UserCheck },
+    { to: '/admin/historical-scores', label: 'Historical Score Entry', icon: History },
     { to: '/admin/create-capstone-group', label: 'Create Capstone Group', icon: Layers },
     { to: '/admin/reports', label: 'Performance Reports', icon: FileBarChart },
     { to: '/admin/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },

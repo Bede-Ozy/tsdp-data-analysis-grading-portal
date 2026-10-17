@@ -356,6 +356,10 @@ export const getStudentAttendance = (studentID) =>
 export const getStudentClassActivities = (studentID) => 
   callApi('getStudentClassActivities', [studentID]);
 
+// Historical Scores (Weeks 1-10)
+export const getHistoricalScores = () => callApi('getHistoricalScores', []);
+export const saveHistoricalScores = (scoresArray, coachID) => callApi('saveHistoricalScores', [scoresArray, coachID]);
+
 // Assignment Management
 export const createAssignment = (type, category, title, description, deliverables, tool, weekNumber, dayNumber, monthNumber, maxScore, allowedFileTypes, maxFilesAllowed, dueDate, notes, materialsArray, coachID) => 
   callApi('createAssignment', [type, category, title, description, deliverables, tool, weekNumber, dayNumber, monthNumber, maxScore, allowedFileTypes, maxFilesAllowed, dueDate, notes, materialsArray, coachID]);

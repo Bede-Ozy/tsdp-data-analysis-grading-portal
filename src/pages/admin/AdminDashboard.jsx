@@ -40,7 +40,8 @@ import {
   X,
   Search,
   Check,
-  Info
+  Info,
+  History
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -718,6 +719,14 @@ export default function AdminDashboard() {
               <BarChart3 className="w-3.5 h-3.5" />
               <span>Challenge Feedback KPIs</span>
             </Link>
+
+            <Link
+              to="/admin/historical-scores"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Historical Scores</span>
+            </Link>
           </div>
         </div>
       </div>
@@ -1259,7 +1268,7 @@ export default function AdminDashboard() {
               Direct management controls, capstone group orchestration, and report generation
             </p>
           </div>
-          <span className="text-xs font-semibold text-slate-400">7 Operational Actions</span>
+          <span className="text-xs font-semibold text-slate-400">8 Operational Actions</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1393,7 +1402,7 @@ export default function AdminDashboard() {
           {/* Action 7: Manual Grade Entry */}
           <Link
             to="/coach/grade-assignments"
-            className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-500 hover:shadow-xs transition-all group flex flex-col justify-between space-y-3 col-span-1 sm:col-span-2 lg:col-span-2"
+            className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-500 hover:shadow-xs transition-all group flex flex-col justify-between space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -1406,10 +1415,34 @@ export default function AdminDashboard() {
                 <h3 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">
                   Manual Grade Entry & Override
                 </h3>
-                <span className="badge-primary text-[10px]">Coach Console</span>
+                <span className="badge-primary text-[10px]">Coach</span>
               </div>
               <p className="text-[11px] text-brand-neutral-muted mt-0.5">
-                Access direct grading forms for offline evaluations, special exemptions, or score overrides.
+                Access direct grading forms for offline evaluations or score overrides.
+              </p>
+            </div>
+          </Link>
+
+          {/* Action 8: Historical Score Entry */}
+          <Link
+            to="/admin/historical-scores"
+            className="p-4 rounded-xl border border-slate-200 bg-white hover:border-brand-primary hover:shadow-xs transition-all group flex flex-col justify-between space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-brand-primary flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white transition-colors">
+                <History className="w-5 h-5" />
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-brand-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-800 group-hover:text-brand-primary">
+                  Historical Score Entry
+                </h3>
+                <span className="bg-indigo-50 text-brand-primary text-[10px] font-bold px-1.5 py-0.5 rounded border border-indigo-100">W1-10</span>
+              </div>
+              <p className="text-[11px] text-brand-neutral-muted mt-0.5">
+                Enter historical percentages for Weeks 1-10 with live point calculations.
               </p>
             </div>
           </Link>
