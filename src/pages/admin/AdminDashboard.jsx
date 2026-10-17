@@ -638,8 +638,8 @@ export default function AdminDashboard() {
         {/* Subtle Decorative Background Wave */}
         <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-white/5 pointer-events-none blur-2xl" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 flex-1">
+        <div className="relative z-10 space-y-4">
+          <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-medium backdrop-blur-xs border border-white/20">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
               <span>Program Governance Console · ITF-NECA-TSDP 2026</span>
@@ -654,7 +654,7 @@ export default function AdminDashboard() {
             </p>
 
             {/* Dynamic Milestone Text & Progress Bar */}
-            <div className="pt-3 space-y-2 max-w-xl">
+            <div className="pt-2 space-y-2 max-w-xl">
               <div className="flex items-center justify-between text-xs font-semibold text-blue-100">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -681,14 +681,14 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Action Button Suite */}
-          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
+          {/* Action Button Suite (Positioned Underneath) */}
+          <div className="pt-1 flex flex-wrap items-center gap-2.5">
             {/* Live Refresh Trigger */}
             <button
               type="button"
               onClick={() => loadDashboardData(true)}
               disabled={refreshing}
-              className="bg-white/10 hover:bg-white/20 text-white font-medium px-3.5 py-2.5 rounded-xl border border-white/20 text-xs flex items-center gap-2 backdrop-blur-xs transition-all disabled:opacity-50"
+              className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-xl border border-white/20 text-xs flex items-center gap-2 backdrop-blur-xs transition-all disabled:opacity-50"
               title="Refresh live metrics from Google Sheets"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -698,7 +698,7 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={handleExportCSV}
-              className="bg-brand-secondary hover:bg-brand-secondary-dark text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
+              className="bg-brand-secondary hover:bg-brand-secondary-dark text-white font-semibold px-4 py-2 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -706,26 +706,10 @@ export default function AdminDashboard() {
 
             <Link
               to="/admin/reports"
-              className="bg-white hover:bg-slate-100 text-brand-primary font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
+              className="bg-white hover:bg-slate-100 text-brand-primary font-semibold px-4 py-2 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
             >
               <FileBarChart className="w-3.5 h-3.5" />
               <span>Performance Reports</span>
-            </Link>
-
-            <Link
-              to="/admin/feedback-analytics"
-              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Challenge Feedback KPIs</span>
-            </Link>
-
-            <Link
-              to="/admin/historical-scores"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-xs hover:shadow-sm text-xs flex items-center gap-2 transition-all"
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Historical Scores</span>
             </Link>
           </div>
         </div>
