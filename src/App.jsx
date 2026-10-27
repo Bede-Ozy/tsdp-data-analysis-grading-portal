@@ -20,6 +20,7 @@ import SubmitModuleProject from './pages/student/SubmitModuleProject';
 import SubmitSocialMedia from './pages/student/SubmitSocialMedia';
 import ViewPerformance from './pages/student/ViewPerformance';
 import ChallengeFeedback from './pages/student/ChallengeFeedback';
+import EndOfProgrammeFeedback from './pages/EndOfProgrammeFeedback';
 
 // Feedback & Round-Up Analytics (Shared Coach & Admin)
 import FeedbackAnalyticsDashboard from './pages/coach/FeedbackAnalyticsDashboard';
@@ -27,6 +28,7 @@ import FeedbackAnalyticsDashboard from './pages/coach/FeedbackAnalyticsDashboard
 // Coach Pages
 import CoachLogin from './pages/coach/CoachLogin';
 import CoachDashboard from './pages/coach/CoachDashboard';
+import CoachRecognition from './pages/coach/Recognition';
 import GenerateAttendanceCode from './pages/coach/GenerateAttendanceCode';
 import GradeAssignments from './pages/coach/GradeAssignments';
 import GradeSubmissions from './pages/coach/GradeSubmissions';
@@ -42,6 +44,7 @@ import ManageAssignments from './pages/coach/ManageAssignments';
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminRecognition from './pages/admin/Recognition';
 import ManageStudents from './pages/admin/ManageStudents';
 import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
@@ -102,28 +105,28 @@ function AppLayout({ children }) {
           </main>
         </div>
 
-      {/* Footer */}
-      <footer className={`border-t border-brand-neutral-border py-4 text-center text-xs text-brand-neutral-muted ${
-        isLoginPage ? 'bg-white/85 backdrop-blur-md' : 'bg-white'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>
-            © {new Date().getFullYear()} ITF-NECA Technical Skills Development Project (TSDP) · Powered by{' '}
-            <strong className="text-brand-neutral">ShamzBridge Consult</strong>
-          </p>
-          <div className="flex items-center gap-3">
-            <Link to="/guide" className="hover:text-brand-primary font-medium text-slate-600 transition-colors">Platform Guide</Link>
-            <span className="text-slate-300">·</span>
-            <Link to="/student/login" className="hover:text-brand-primary transition-colors">Resident</Link>
-            <span className="text-slate-300">·</span>
-            <Link to="/coach/login" className="hover:text-brand-primary transition-colors">Coach</Link>
-            <span className="text-slate-300">·</span>
-            <Link to="/admin/login" className="hover:text-slate-900 font-medium transition-colors">Admin</Link>
-            <span className="text-slate-300">·</span>
-            <span>v1.0</span>
+        {/* Footer */}
+        <footer className={`border-t border-brand-neutral-border py-4 text-center text-xs text-brand-neutral-muted ${
+          isLoginPage ? 'bg-white/85 backdrop-blur-md' : 'bg-white'
+        }`}>
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>
+              © {new Date().getFullYear()} ITF-NECA Technical Skills Development Project (TSDP) · Powered by{' '}
+              <strong className="text-brand-neutral">ShamzBridge Consult</strong>
+            </p>
+            <div className="flex items-center gap-3">
+              <Link to="/guide" className="hover:text-brand-primary font-medium text-slate-600 transition-colors">Platform Guide</Link>
+              <span className="text-slate-300">·</span>
+              <Link to="/student/login" className="hover:text-brand-primary transition-colors">Resident</Link>
+              <span className="text-slate-300">·</span>
+              <Link to="/coach/login" className="hover:text-brand-primary transition-colors">Coach</Link>
+              <span className="text-slate-300">·</span>
+              <Link to="/admin/login" className="hover:text-slate-900 font-medium transition-colors">Admin</Link>
+              <span className="text-slate-300">·</span>
+              <span>v1.0</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
       </div>
     </div>
   );
@@ -157,241 +160,268 @@ export default function App() {
               {/* Legacy / Direct Role Redirect */}
               <Route path="/home" element={<HomeRedirect />} />
 
+              {/* Public Documentation & Workflow Guide Pages */}
+              <Route path="/guide" element={<PlatformGuide />} />
+              <Route path="/about" element={<PlatformGuide />} />
 
-            {/* Public Documentation & Workflow Guide Pages */}
-            <Route path="/guide" element={<PlatformGuide />} />
-            <Route path="/about" element={<PlatformGuide />} />
+              {/* Public Challenge Feedback Form (Accessible directly by link without login) */}
+              <Route path="/feedback" element={<ChallengeFeedback />} />
+              <Route path="/challenge-feedback" element={<ChallengeFeedback />} />
 
-            {/* Public Challenge Feedback Form (Accessible directly by link without login) */}
-            <Route path="/feedback" element={<ChallengeFeedback />} />
-            <Route path="/challenge-feedback" element={<ChallengeFeedback />} />
+              {/* Public End-of-Programme Final Feedback Form */}
+              <Route path="/final-feedback" element={<EndOfProgrammeFeedback />} />
+              <Route path="/end-of-programme-feedback" element={<EndOfProgrammeFeedback />} />
 
-            {/* Public Authentication Pages */}
-            <Route path="/student/login" element={<StudentLogin />} />
-            <Route path="/coach/login" element={<CoachLogin />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
+              {/* Public Authentication Pages */}
+              <Route path="/student/login" element={<StudentLogin />} />
+              <Route path="/coach/login" element={<CoachLogin />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
 
-            {/* Protected Student Portal Routes */}
-            <Route
-              path="/student/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/attendance"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <MarkAttendance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/submit-assignment"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <SubmitAssignment />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/submit-module-project"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <SubmitModuleProject />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/submit-social-media"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <SubmitSocialMedia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/performance"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <ViewPerformance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/challenge-feedback"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <ChallengeFeedback />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Student Portal Routes */}
+              <Route
+                path="/student/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/attendance"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <MarkAttendance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/submit-assignment"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <SubmitAssignment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/submit-module-project"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <SubmitModuleProject />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/submit-social-media"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <SubmitSocialMedia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/performance"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <ViewPerformance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/challenge-feedback"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <ChallengeFeedback />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/final-feedback"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <EndOfProgrammeFeedback inPortal={true} />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected Coach Portal Routes */}
-            <Route
-              path="/coach/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <CoachDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/attendance-code"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GenerateAttendanceCode />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/grade-assignments"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeAssignments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/grade-submissions"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeAssignments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/class-activity"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <RecordClassActivity />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/grade-module-projects"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeModuleProjects />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/grade-capstone"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeCapstoneSprints />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/grade-presentations"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <GradeGroupPresentations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/soft-skills"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <SoftSkillsEvaluation />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/approve-social-media"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <ApproveSocialMedia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/create-assignment"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <CreateAssignment />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/manage-assignments"
-              element={
-                <ProtectedRoute allowedRoles={['coach']}>
-                  <ManageAssignments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/coach/feedback-analytics"
-              element={
-                <ProtectedRoute allowedRoles={['coach', 'admin']}>
-                  <FeedbackAnalyticsDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Coach Portal Routes */}
+              <Route
+                path="/coach/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <CoachDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/recognition"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <CoachRecognition />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/attendance-code"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GenerateAttendanceCode />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/grade-assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GradeAssignments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/grade-submissions"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GradeAssignments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/class-activity"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <RecordClassActivity />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/grade-module-projects"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GradeModuleProjects />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/grade-capstone"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GradeCapstoneSprints />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/grade-presentations"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <GradeGroupPresentations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/soft-skills"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <SoftSkillsEvaluation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/approve-social-media"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <ApproveSocialMedia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/create-assignment"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <CreateAssignment />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/manage-assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <ManageAssignments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/coach/feedback-analytics"
+                element={
+                  <ProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <FeedbackAnalyticsDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected Admin Portal Routes */}
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/students"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ManageStudents />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/coaches"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ManageCoaches />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/reports"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <ViewReports />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/create-capstone-group"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'coach']}>
-                  <CreateCapstoneGroup />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/feedback-analytics"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'coach']}>
-                  <FeedbackAnalyticsDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/historical-scores"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'coach']}>
-                  <HistoricalScores />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Admin Portal Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/recognition"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminRecognition />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/students"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ManageStudents />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/coaches"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ManageCoaches />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <ViewReports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/create-capstone-group"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <CreateCapstoneGroup />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/feedback-analytics"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <FeedbackAnalyticsDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/historical-scores"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <HistoricalScores />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Standalone Catch-All 404 (No Sidebar, Full Width & Height) */}

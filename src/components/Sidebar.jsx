@@ -24,7 +24,9 @@ import {
   HelpCircle,
   BarChart3,
   History,
-  X
+  X,
+  Award,
+  Trophy
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -37,11 +39,12 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/student/submit-module-project', label: 'Submit Module Project', icon: FolderArchive },
     { to: '/student/submit-social-media', label: 'Submit Social Media', icon: Share2 },
     { to: '/student/performance', label: 'My Performance', icon: TrendingUp },
-    { to: '/student/challenge-feedback', label: 'Challenge Feedback', icon: HelpCircle },
+    { to: '/student/final-feedback', label: 'End of Programme Feedback', icon: Award },
   ];
 
   const coachLinks = [
     { to: '/coach/dashboard', label: 'Coach Overview', icon: LayoutDashboard },
+    { to: '/coach/recognition', label: 'Recognition', icon: Trophy },
     { to: '/coach/grade-assignments', label: 'Grade Assignments', icon: CheckSquare },
     { to: '/coach/class-activity', label: 'Record Class Activity', icon: MessageSquare },
     { to: '/coach/grade-module-projects', label: 'Grade Module Projects', icon: Database },
@@ -54,6 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const adminLinks = [
     { to: '/admin/dashboard', label: 'Cohort Overview', icon: LayoutDashboard },
+    { to: '/admin/recognition', label: 'Recognition', icon: Trophy },
     { to: '/admin/students', label: 'Manage Residents', icon: Users },
     { to: '/admin/coaches', label: 'Manage Coaches', icon: UserCheck },
     { to: '/admin/historical-scores', label: 'Historical Score Entry', icon: History },

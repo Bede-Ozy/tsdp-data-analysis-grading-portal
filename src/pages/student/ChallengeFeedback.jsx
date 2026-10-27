@@ -18,7 +18,8 @@ import {
   Info,
   Layers,
   FileText,
-  UserCheck
+  UserCheck,
+  Lock
 } from 'lucide-react';
 
 const MODULE_OPTIONS = [
@@ -216,15 +217,12 @@ export default function ChallengeFeedback() {
   // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
+    setErrorMessage('This form has been deactivated. Submissions are now closed.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  };
 
-    // Required Resident Info
-    if (!studentID.trim()) {
-      setErrorMessage('Please provide your Student ID / Resident Number.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
+  /* Deactivated submission logic
     if (!studentName.trim()) {
       setErrorMessage('Please enter your full name or select your resident ID.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -377,6 +375,7 @@ export default function ChallengeFeedback() {
       setSubmitting(false);
     }
   };
+  */
 
   const handleRetrySync = async () => {
     if (!pendingPayload) return;
@@ -464,6 +463,28 @@ export default function ChallengeFeedback() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Deactivated Notice Banner */}
+      <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="bg-amber-200 text-amber-900 font-bold text-[11px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <Lock className="w-3.5 h-3.5 text-amber-800" /> Form Deactivated
+            </span>
+            <span className="font-semibold text-xs text-amber-800">Submissions Closed</span>
+          </div>
+          <p className="text-xs sm:text-sm text-amber-900 leading-relaxed max-w-xl font-medium">
+            This Challenge Feedback form has been deactivated as the revision clinic sessions have concluded. Please navigate to the <strong>End-of-Programme Feedback</strong> form to complete your program evaluation and class nominations.
+          </p>
+        </div>
+        <Link
+          to="/student/final-feedback"
+          className="bg-brand-primary hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 flex-shrink-0 transition-all shadow-xs"
+        >
+          <span>End-of-Programme Feedback</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* Success Confirmation Modal */}
@@ -555,6 +576,7 @@ export default function ChallengeFeedback() {
       {/* Main Questionnaire Form */}
       {!submitSuccess && (
         <form onSubmit={handleSubmit} className="space-y-6">
+          <fieldset disabled className="space-y-6 opacity-75">
           {syncWarning && (
             <div className="bg-amber-50 border-2 border-amber-300 text-amber-900 p-5 rounded-2xl space-y-3 shadow-sm animate-scale-up">
               <div className="flex items-start gap-3">
@@ -1088,28 +1110,21 @@ export default function ChallengeFeedback() {
               className="form-input text-xs resize-y"
             />
           </div>
+          </fieldset>
 
           {/* Submit Action Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3">
             <div className="text-xs text-slate-500 flex items-center gap-1.5">
-              <Info className="w-4 h-4 text-brand-primary flex-shrink-0" />
-              <span>Your responses will directly shape the revision clinic timetable.</span>
+              <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>This feedback collection form is closed. New submissions are deactivated.</span>
             </div>
 
             <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary w-full sm:w-auto px-8 py-3 text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-orange-glow transition-all"
+              type="button"
+              disabled
+              className="bg-slate-200 text-slate-500 border border-slate-300 font-bold w-full sm:w-auto px-8 py-3 text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed shadow-none"
             >
-              {submitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Submitting Responses...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" /> Submit Feedback Form
-                </>
-              )}
+              <Lock className="w-4 h-4 text-slate-400" /> Form Deactivated — Submissions Closed
             </button>
           </div>
         </form>

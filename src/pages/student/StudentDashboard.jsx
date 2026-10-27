@@ -45,6 +45,29 @@ export default function StudentDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
+  const [hasSubmittedFinalFeedback, setHasSubmittedFinalFeedback] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('tsdp_end_of_programme_feedback');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const uId = user?.studentID || user?.id || '';
+          const uNum = user?.studentNumber ? user.studentNumber.toString() : '';
+          const uEmail = (user?.email || '').toLowerCase().trim();
+          const found = list.find(item => {
+            if (item.isAnonymous) return false;
+            if (uId && item.studentID && item.studentID === uId) return true;
+            if (uNum && item.studentNumber && item.studentNumber.toString() === uNum) return true;
+            if (uEmail && item.email && item.email.toLowerCase().trim() === uEmail) return true;
+            return false;
+          });
+          if (found) setHasSubmittedFinalFeedback(true);
+        }
+      }
+    } catch (e) {}
+  }, [user]);
 
   const handleSaveName = (e) => {
     e.preventDefault();
@@ -352,27 +375,43 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Program Round-Up Revision & Challenge Feedback Callout Banner */}
-      <div className="bg-gradient-to-r from-brand-primary via-orange-500 to-amber-500 rounded-2xl p-4 sm:p-5 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-orange-400/40 animate-fade-in">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      {/* End-of-Programme Final Feedback & Class Recognition Banner */}
+      <div className={`rounded-2xl p-4 sm:p-5 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border animate-fade-in ${
+        hasSubmittedFinalFeedback
+          ? 'bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 border-emerald-500/40'
+          : 'bg-gradient-to-r from-[#003E7E] via-[#0054A6] to-amber-600 border-blue-400/30'
+      }`}>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="bg-white/20 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-yellow-200" /> Round-Up Revision Request
+              <Award className="w-3.5 h-3.5 text-yellow-300" /> End-of-Programme Feedback
             </span>
-            <span className="text-xs font-semibold text-orange-100 hidden sm:inline">Have topics you need us to revisit?</span>
+            {hasSubmittedFinalFeedback ? (
+              <span className="bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-300" /> Response Submitted
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-blue-100 hidden sm:inline">
+                Official Programme Evaluation & Class Nominations
+              </span>
+            )}
           </div>
           <h3 className="text-base font-bold text-white">
-            Submit Your Challenge Feedback for Final Recap Clinics
+            {hasSubmittedFinalFeedback
+              ? 'Thank You for Submitting Your End-of-Programme Feedback!'
+              : 'Complete Your End-of-Programme Feedback & Class Nominations'}
           </h3>
-          <p className="text-xs text-orange-100 max-w-xl font-normal leading-relaxed">
-            Tell the coaches what specific concepts in SQL, Power BI, Python, or Excel you need reviewed as we round up the program.
+          <p className="text-xs text-blue-100 max-w-xl font-normal leading-relaxed">
+            {hasSubmittedFinalFeedback
+              ? 'Your comprehensive reflections and nominations for best student and best-behaved student have been recorded. You can view or update your answers anytime.'
+              : 'Rate your residency experience, assess skills gained, share reflections, and nominate your class\'s best student and best-behaved student.'}
           </p>
         </div>
         <Link
-          to="/student/challenge-feedback"
-          className="bg-white hover:bg-orange-50 text-orange-600 font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 flex-shrink-0"
+          to="/student/final-feedback"
+          className="bg-white hover:bg-orange-50 text-[#003E7E] font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 flex-shrink-0"
         >
-          <span>Fill Feedback Form</span>
+          <span>{hasSubmittedFinalFeedback ? 'View / Update Feedback' : 'Fill Final Feedback'}</span>
           <ChevronRight className="w-4 h-4" />
         </Link>
       </div>

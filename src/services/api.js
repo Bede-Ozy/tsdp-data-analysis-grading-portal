@@ -501,7 +501,7 @@ export const DEFAULT_FEEDBACK_SHEET_ID = '1JW0wI8zsuxeDiDzx-HvFmJhjOzIXP5_YzfepI
  * Returns the configured target Google Sheet ID for Challenge Feedback.
  * Priority: localStorage override > import.meta.env.VITE_FEEDBACK_SHEET_ID > Sheet_ID > fallback
  */
-export function getFeedbackSheetId() {
+export function getFeedbackSheetId(allowFallback = true) {
   try {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(FEEDBACK_SHEET_KEY);
@@ -515,7 +515,7 @@ export function getFeedbackSheetId() {
                 import.meta.env.VITE_SHEET_ID;
   if (envId && envId.trim()) return envId.trim();
 
-  return DEFAULT_FEEDBACK_SHEET_ID;
+  return allowFallback ? DEFAULT_FEEDBACK_SHEET_ID : '';
 }
 
 /**
@@ -766,4 +766,21 @@ export async function updateFeedbackReviewStatus(feedbackId, newStatus, coachNot
 
   return { success: true };
 }
+
+// ============================================================================
+// END-OF-PROGRAMME FINAL FEEDBACK SERVICE
+// ============================================================================
+export const END_OF_PROGRAMME_FEEDBACK_KEY = 'tsdp_end_of_programme_feedback';
+
+export const submitEndOfProgrammeFeedback = (record) => 
+  callApi('submitEndOfProgrammeFeedback', [record]);
+
+export const getEndOfProgrammeFeedbackList = () => 
+  callApi('getEndOfProgrammeFeedbackList', []);
+
+/**
+ * Fetch computed recognition leaderboard awards and team standings.
+ */
+export const getRecognitionLeaderboard = () =>
+  callApi('getRecognitionLeaderboard', []);
 
