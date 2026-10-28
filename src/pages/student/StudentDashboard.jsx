@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStudentDashboard, getStudentPendingAssignments, getStudentGroupRank, clearApiCache } from '../../services/api';
+import { getStudentDashboard, getStudentPendingAssignments, getStudentGroupRank, clearApiCache, getExamConfig, getAllExamResults } from '../../services/api';
 import { PROGRAM_INFO, getGradeLetter, formatScore } from '../../utils/constants';
 import ScoreTable from '../../components/ScoreTable';
 import { CardSkeleton, KPIGridSkeleton, TableSkeleton } from '../../components/SkeletonLoader';
@@ -25,7 +25,9 @@ import {
   AlertTriangle,
   Trophy,
   Users,
-  RotateCw
+  RotateCw,
+  FileQuestion,
+  Lock
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -46,6 +48,8 @@ export default function StudentDashboard() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
   const [hasSubmittedFinalFeedback, setHasSubmittedFinalFeedback] = useState(false);
+  const [examConfig, setExamConfig] = useState(null);
+  const [examResult, setExamResult] = useState(null);
 
   useEffect(() => {
     try {
@@ -86,11 +90,24 @@ export default function StudentDashboard() {
 
     setLoading(true);
     try {
-      const [dashRes, pendingRes, groupRankRes] = await Promise.all([
+      const [dashRes, pendingRes, groupRankRes, examCfgRes, allExamRes] = await Promise.all([
         getStudentDashboard(studentID),
         getStudentPendingAssignments(studentID || user?.studentNumber).catch(() => null),
-        getStudentGroupRank(studentID || user?.studentNumber).catch(() => null)
+        getStudentGroupRank(studentID || user?.studentNumber).catch(() => null),
+        getExamConfig().catch(() => null),
+        getAllExamResults().catch(() => null),
       ]);
+
+      // Exam config
+      setExamConfig(examCfgRes);
+      // Find this student's exam result
+      if (Array.isArray(allExamRes)) {
+        const myResult = allExamRes.find(r =>
+          r.studentID === studentID ||
+          r.studentNumber == user?.studentNumber
+        );
+        setExamResult(myResult || null);
+      }
 
       let pList = [];
       let oList = [];
@@ -374,6 +391,82 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Final Technical Exam Card */}
+      {examConfig !== undefined && (() => {
+        const isActive = examConfig?.isActive === true;
+        const hasSubmitted = examResult != null;
+        const score = examResult?.scorePercent ?? examResult?.scoreRaw ?? null;
+        const passed = examResult?.passed ?? (score !== null ? score >= 70 : null);
+
+        if (hasSubmitted) {
+          return (
+            <div className="portal-card border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
+                  <FileQuestion className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-slate-800">Final Technical Exam — Completed</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${passed ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                      {passed ? '✓ Passed' : '✗ Not Passed'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">70 questions · 45 minutes · Score: {score !== null ? `${Math.round(score)}%` : '—'}</p>
+                </div>
+              </div>
+              <Link to="/student/exam/result" className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 flex-shrink-0">
+                View Results <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+        }
+
+        if (isActive) {
+          return (
+            <div className="portal-card border-2 border-brand-primary bg-gradient-to-r from-blue-50 to-indigo-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center flex-shrink-0">
+                  <FileQuestion className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-slate-800">Final Technical Exam — Available Now</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-200">🟢 Live</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">70 questions · 45 minutes · 70% to pass</p>
+                  <p className="text-xs text-orange-600 font-semibold mt-0.5">⚠ Once started, the timer cannot be paused. No retakes.</p>
+                </div>
+              </div>
+              <Link to="/student/exam" className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-1.5 flex-shrink-0">
+                Start Exam <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+        }
+
+        // Inactive teaser
+        return (
+          <div className="portal-card border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 opacity-90">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-300 text-slate-600 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-slate-700">Final Technical Exam</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-600 border border-slate-300">🔒 Opens Thursday</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">70 questions · 45 minutes · 70% to pass</p>
+              </div>
+            </div>
+            <button disabled className="py-2 px-4 rounded-xl bg-slate-200 text-slate-400 text-xs font-semibold cursor-not-allowed flex items-center gap-1.5 flex-shrink-0">
+              <Lock className="w-3.5 h-3.5" /> Locked
+            </button>
+          </div>
+        );
+      })()}
 
       {/* End-of-Programme Final Feedback & Class Recognition Banner */}
       <div className={`rounded-2xl p-4 sm:p-5 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border animate-fade-in ${

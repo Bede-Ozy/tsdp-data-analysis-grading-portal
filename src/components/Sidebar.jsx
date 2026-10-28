@@ -26,7 +26,8 @@ import {
   History,
   X,
   Award,
-  Trophy
+  Trophy,
+  FileQuestion
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -53,6 +54,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/coach/soft-skills', label: 'Soft Skills Evaluation', icon: Smile },
     { to: '/coach/approve-social-media', label: 'Approve Social Media', icon: CheckCircle },
     { to: '/coach/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
+    { to: '/coach/exam', label: 'Exam', icon: FileQuestion },
   ];
 
   const adminLinks = [
@@ -64,6 +66,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/admin/create-capstone-group', label: 'Create Capstone Group', icon: Layers },
     { to: '/admin/reports', label: 'Performance Reports', icon: FileBarChart },
     { to: '/admin/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
+    { to: '/admin/exam', label: 'Exam', icon: FileQuestion },
   ];
 
   let links = [];

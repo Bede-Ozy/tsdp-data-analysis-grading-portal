@@ -21,6 +21,8 @@ import SubmitSocialMedia from './pages/student/SubmitSocialMedia';
 import ViewPerformance from './pages/student/ViewPerformance';
 import ChallengeFeedback from './pages/student/ChallengeFeedback';
 import EndOfProgrammeFeedback from './pages/EndOfProgrammeFeedback';
+import ExamPage from './pages/student/ExamPage';
+import ExamResultPage from './pages/student/ExamResultPage';
 
 // Feedback & Round-Up Analytics (Shared Coach & Admin)
 import FeedbackAnalyticsDashboard from './pages/coach/FeedbackAnalyticsDashboard';
@@ -50,6 +52,7 @@ import ManageCoaches from './pages/admin/ManageCoaches';
 import ViewReports from './pages/admin/ViewReports';
 import CreateCapstoneGroup from './pages/admin/CreateCapstoneGroup';
 import HistoricalScores from './pages/admin/HistoricalScores';
+import ManageExam from './pages/coach/ManageExam';
 
 // Documentation & Guide Page
 import PlatformGuide from './pages/PlatformGuide';
@@ -242,6 +245,22 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/student/exam"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <ExamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/exam/result"
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <ExamResultPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Coach Portal Routes */}
               <Route
@@ -356,6 +375,14 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/coach/exam"
+                element={
+                  <ProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <ManageExam />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Admin Portal Routes */}
               <Route
@@ -419,6 +446,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'coach']}>
                     <HistoricalScores />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/exam"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'coach']}>
+                    <ManageExam />
                   </ProtectedRoute>
                 }
               />

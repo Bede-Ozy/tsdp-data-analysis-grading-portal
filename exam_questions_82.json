@@ -1,0 +1,822 @@
+[
+  {
+    "questionText": "An analyst enters the following formula into cell C1: `=(10 + 5 * 2) ^ 2 / 4 - 5` What result will Excel display in cell C1?",
+    "optionA": "95",
+    "optionB": "100",
+    "optionC": "75",
+    "optionD": "220",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 1
+  },
+  {
+    "questionText": "Cell B2 contains the formula `=A2 * $C$1`. If this formula is copied and pasted into cell D4, what formula will appear in cell D4?",
+    "optionA": "=C4 * $C$1",
+    "optionB": "=A4 * $C$1",
+    "optionC": "=C4 * $E$3",
+    "optionD": "=B4 * $C$1",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 2
+  },
+  {
+    "questionText": "You are constructing a two-dimensional price calculation matrix. Quantities are placed down column A (cells A5:A10) and unit prices are placed across row 4 (cells B4:F4). Which formula should be entered into cell B5 so that it can be dragged both across to column F and down to row 10?",
+    "optionA": "=$A$5 * B$4",
+    "optionB": "=$A5 * B$4",
+    "optionC": "=A$5 * $B4",
+    "optionD": "=$A5 * $B$4",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 3
+  },
+  {
+    "questionText": "Range A1:A5 contains the following values: - A1: 15 - A2: 25 - A3: \"Pending\" (text string) - A4: 10 - A5: [Blank / Empty Cell] What are the respective outputs of `=SUM(A1:A5)` and `=A1+A2+A3+A4+A5`?",
+    "optionA": "50 and 50",
+    "optionB": "50 and #VALUE!",
+    "optionC": "#VALUE! and 50",
+    "optionD": "50 and #NAME?",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 4
+  },
+  {
+    "questionText": "Column range B1:B10 contains 5 numbers, 2 text entries, 2 cells with formulas returning empty text strings `\"\"`, and 1 truly blank/untouched cell. What is the value returned by `=COUNTA(B1:B10)`?",
+    "optionA": "5",
+    "optionB": "7",
+    "optionC": "9",
+    "optionD": "10",
+    "correctAnswer": "C",
+    "module": "Excel",
+    "questionNumber": 5
+  },
+  {
+    "questionText": "A retail store tracks daily sales in cells A1:A4: - A1: 100 - A2: 0 - A3: [Blank] - A4: 200 What result does `=AVERAGE(A1:A4)` produce?",
+    "optionA": "75",
+    "optionB": "100",
+    "optionC": "150",
+    "optionD": "#DIV/0!",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 6
+  },
+  {
+    "questionText": "You want to rank sales reps where the highest sales amount receives Rank 1. The sales amounts are in range C2:C20. What is the correct formula to place in cell D2?",
+    "optionA": "=RANK.EQ(C2, $C$2:$C$20, 1)",
+    "optionB": "=RANK.EQ(C2, $C$2:$C$20, 0)",
+    "optionC": "=RANK.AVG($C$2:$C$20, C2)",
+    "optionD": "=LARGE($C$2:$C$20, C2)",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 7
+  },
+  {
+    "questionText": "What is the fundamental difference in argument order between `SUMIF` and `SUMIFS` in Excel?",
+    "optionA": "SUMIF places sum_range first; SUMIFS places sum_range last",
+    "optionB": "SUMIF places sum_range as the optional last argument; SUMIFS requires sum_range as the mandatory first argument",
+    "optionC": "Both functions always require sum_range as the final argument",
+    "optionD": "SUMIFS does not support a sum_range argument",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 8
+  },
+  {
+    "questionText": "You want to sum sales in column G where the corresponding dates in column B are on or after October 1, 2026. Which formula syntax is valid and standard in Excel?",
+    "optionA": "=SUMIFS(G:G, B:B, >=DATE(2026, 10, 1))",
+    "optionB": "=SUMIFS(G:G, B:B, \">=\" & DATE(2026, 10, 1))",
+    "optionC": "=SUMIFS(G:G, B:B, \">=DATE(2026, 10, 1)\")",
+    "optionD": "=SUMIFS(B:B, \">=\" & DATE(2026, 10, 1), G:G)",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 9
+  },
+  {
+    "questionText": "What error does `=AVERAGEIFS(D2:D50, C2:C50, \"Electronics\", B2:B50, \"West\")` return if there are zero transactions that match both criteria in the dataset?",
+    "optionA": "#N/A",
+    "optionB": "#NULL!",
+    "optionC": "#DIV/0!",
+    "optionD": "0",
+    "correctAnswer": "C",
+    "module": "Excel",
+    "questionNumber": 10
+  },
+  {
+    "questionText": "Refer to the NovaMart dataset: - Column C: Customer (Ada, Tunde, Musa, Chika) - Column D: Product (Rice, Milk, Bread) - Column G: SalesAmount Which formula correctly calculates total sales generated exclusively by customer \"Ada\" buying \"Rice\"?",
+    "optionA": "=SUMIF(C2:C11, \"Ada\", G2:G11) + SUMIF(D2:D11, \"Rice\", G2:G11)",
+    "optionB": "=SUMIFS(G2:G11, C2:C11, \"Ada\", D2:D11, \"Rice\")",
+    "optionC": "=SUMIFS(C2:C11, \"Ada\", D2:D11, \"Rice\", G2:G11)",
+    "optionD": "=COUNTIFS(G2:G11, C2:C11, \"Ada\", D2:D11, \"Rice\")",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 11
+  },
+  {
+    "questionText": "Transaction codes in cell A2 follow the format \"NM-2026-8491\". Which formula correctly extracts only the 4-digit year \"2026\"?",
+    "optionA": "=LEFT(A2, 4)",
+    "optionB": "=RIGHT(A2, 4)",
+    "optionC": "=MID(A2, 4, 4)",
+    "optionD": "=MID(A2, 3, 4)",
+    "correctAnswer": "C",
+    "module": "Excel",
+    "questionNumber": 12
+  },
+  {
+    "questionText": "A column contains customer full names with varying lengths separated by a single space (e.g., \"Ada Eze\", \"Babatunde Adeyemi\"). Which formula dynamically extracts only the first name from cell A2?",
+    "optionA": "=LEFT(A2, FIND(\" \", A2))",
+    "optionB": "=LEFT(A2, FIND(\" \", A2) - 1)",
+    "optionC": "=MID(A2, 1, SEARCH(\" \", A2))",
+    "optionD": "=RIGHT(A2, LEN(A2) - FIND(\" \", A2))",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 13
+  },
+  {
+    "questionText": "What is the specific operational difference between `TRIM()` and `CLEAN()` in Excel?",
+    "optionA": "TRIM removes extra spaces; CLEAN removes non-printable ASCII characters (values 0 to 31)",
+    "optionB": "TRIM converts text to uppercase; CLEAN removes spaces",
+    "optionC": "TRIM deletes punctuation marks; CLEAN deletes numbers",
+    "optionD": "Both functions perform identical operations",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 14
+  },
+  {
+    "questionText": "You have regions listed in cells A1:A5: \"North\", \"\", \"South\", \"East\", \"\". You want to combine them into a single string separated by commas, skipping blank entries. Which formula accomplishes this cleanly?",
+    "optionA": "=CONCATENATE(A1:A5, \",\")",
+    "optionB": "=TEXTJOIN(\", \", TRUE, A1:A5)",
+    "optionC": "=TEXTJOIN(\", \", FALSE, A1:A5)",
+    "optionD": "=MERGE(A1:A5, \", \")",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 15
+  },
+  {
+    "questionText": "An imported report stores sales figures as text with an apostrophe prefix (e.g., cell A1 contains `'5000`). When you try `=SUM(A1:A10)`, the result is 0. How can you convert cell A1 into a true calculable number?",
+    "optionA": "=VALUE(A1)",
+    "optionB": "=TEXT(A1, \"0\")",
+    "optionC": "=STRING(A1)",
+    "optionD": "=TYPE(A1)",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 16
+  },
+  {
+    "questionText": "What is the return value of the formula `=IF(10 > 20, \"Pass\")`?",
+    "optionA": "#VALUE!",
+    "optionB": "Pass",
+    "optionC": "FALSE",
+    "optionD": "Blank (Empty cell)",
+    "correctAnswer": "C",
+    "module": "Excel",
+    "questionNumber": 17
+  },
+  {
+    "questionText": "To assign academic standing based on GPA in cell C2: - GPA >= 3.5: \"Distinction\" - GPA >= 3.0: \"Credit\" - GPA >= 2.0: \"Pass\" - Otherwise: \"Probation\" Which formula correctly uses the `IFS` function?",
+    "optionA": "=IFS(C2>=3.5, \"Distinction\", C2>=3.0, \"Credit\", C2>=2.0, \"Pass\", TRUE, \"Probation\")",
+    "optionB": "=IFS(C2>=3.5, \"Distinction\", C2>=3.0, \"Credit\", C2>=2.0, \"Pass\", ELSE, \"Probation\")",
+    "optionC": "=IFS(C2>=2.0, \"Pass\", C2>=3.0, \"Credit\", C2>=3.5, \"Distinction\", \"Probation\")",
+    "optionD": "=IFS(C2<2.0, \"Probation\", C2>2.0, \"Pass\", C2>3.0, \"Credit\")",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 18
+  },
+  {
+    "questionText": "A candidate qualifies for an interview only if their Technical Score (cell B2) is 70 or higher AND either their Soft Skills Score (cell C2) is 80 or higher OR their Project Score (cell D2) is 85 or higher. Which formula represents this logic?",
+    "optionA": "=IF(OR(B2>=70, AND(C2>=80, D2>=85)), \"Qualified\", \"Disqualified\")",
+    "optionB": "=IF(AND(B2>=70, OR(C2>=80, D2>=85)), \"Qualified\", \"Disqualified\")",
+    "optionC": "=IF(AND(B2>=70, C2>=80, D2>=85), \"Qualified\", \"Disqualified\")",
+    "optionD": "=IF(OR(B2>=70, C2>=80, D2>=85), \"Qualified\", \"Disqualified\")",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 19
+  },
+  {
+    "questionText": "Why do financial modeling and data auditing best practices recommend using `IFNA()` instead of `IFERROR()` when handling lookup formulas?",
+    "optionA": "IFNA calculates twice as fast as IFERROR",
+    "optionB": "IFERROR masks dangerous errors such as misspelled formula names (#NAME?) or deleted columns (#REF!), whereas IFNA only catches missing lookup values (#N/A)",
+    "optionC": "IFNA works in older versions of Excel while IFERROR does not",
+    "optionD": "IFERROR cannot handle exact matches",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 20
+  },
+  {
+    "questionText": "In the formula `=VLOOKUP(E2, A2:D100, 3, FALSE)`, what does the 4th argument `FALSE` specify?",
+    "optionA": "It forces an exact match search",
+    "optionB": "It allows an approximate match search",
+    "optionC": "It indicates that column 3 is sorted descending",
+    "optionD": "It returns the value from the last row if not found",
+    "correctAnswer": "A",
+    "module": "Excel",
+    "questionNumber": 21
+  },
+  {
+    "questionText": "An analyst has Employee ID in column C and Employee Name in column A. Why will the formula `=VLOOKUP(\"EMP-101\", A2:C50, 1, FALSE)` fail to return the employee name when looking up by Employee ID?",
+    "optionA": "VLOOKUP cannot search text strings",
+    "optionB": "VLOOKUP can only search for the lookup value in the FIRST (leftmost) column of the table array and cannot look to its left",
+    "optionC": "The table array must start from column B",
+    "optionD": "Column index 1 is reserved for headers",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 22
+  },
+  {
+    "questionText": "Which formula correctly retrieves the Department name in column A based on an Employee ID in cell F2 matched against column C (cells C2:C100)?",
+    "optionA": "=MATCH(F2, C2:C100, INDEX(A2:A100, 0))",
+    "optionB": "=INDEX(A2:A100, MATCH(F2, C2:C100, 0))",
+    "optionC": "=INDEX(C2:C100, MATCH(F2, A2:A100, 0))",
+    "optionD": "=MATCH(INDEX(A2:A100, 0), F2, C2:C100)",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 23
+  },
+  {
+    "questionText": "You have a matrix table of Shipping Rates where Destinations are in rows A2:A10, Package Weights are in column headers B1:G1, and rate values are in B2:G10. Destination is in cell J2 and Weight is in cell K2. Which formula performs a dynamic two-way lookup?",
+    "optionA": "=VLOOKUP(J2, A2:G10, MATCH(K2, B1:G1, 0), FALSE)",
+    "optionB": "=INDEX(B2:G10, MATCH(J2, A2:A10, 0), MATCH(K2, B1:G1, 0))",
+    "optionC": "=INDEX(A2:G10, MATCH(K2, B1:G1, 0), MATCH(J2, A2:A10, 0))",
+    "optionD": "=XLOOKUP(J2, A2:A10, XLOOKUP(K2, B1:G1, B2:G10))",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 24
+  },
+  {
+    "questionText": "Which of the following is an advantage of `XLOOKUP` over traditional `VLOOKUP`?",
+    "optionA": "XLOOKUP defaults to an exact match without needing a 4th argument of FALSE",
+    "optionB": "XLOOKUP can look to the left and right natively",
+    "optionC": "XLOOKUP has a built-in `[if_not_found]` parameter avoiding nested IFERROR",
+    "optionD": "All of the above",
+    "correctAnswer": "D",
+    "module": "Excel",
+    "questionNumber": 25
+  },
+  {
+    "questionText": "When you drag a text-based column (such as \"CustomerName\" or \"PaymentStatus\") into the **Values** area of a standard Pivot Table, what aggregation function does Excel apply by default?",
+    "optionA": "SUM",
+    "optionB": "COUNT",
+    "optionC": "AVERAGE",
+    "optionD": "DISTINCTCOUNT",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 26
+  },
+  {
+    "questionText": "In a Pivot Table showing Product Categories in Rows and Total Sales in Values, you want to see each category's revenue contribution as a percentage of the entire company revenue. Which setting should you choose under **Show Values As**?",
+    "optionA": "% of Row Total",
+    "optionB": "% of Column Total (or % of Grand Total)",
+    "optionC": "Difference From",
+    "optionD": "Running Total In",
+    "correctAnswer": "B",
+    "module": "Excel",
+    "questionNumber": 27
+  },
+  {
+    "questionText": "To restrict entries in cell E2 so users can only select from \"Approved\", \"Pending\", or \"Rejected\" from an in-cell dropdown list, which Data Validation criteria should be selected?",
+    "optionA": "Whole number",
+    "optionB": "Text length",
+    "optionC": "List",
+    "optionD": "Custom formula",
+    "correctAnswer": "C",
+    "module": "Excel",
+    "questionNumber": 28
+  },
+  {
+    "questionText": "In relational database design, what is the primary distinction between a Primary Key and a Foreign Key?",
+    "optionA": "A primary key can contain NULL values, whereas a foreign key cannot",
+    "optionB": "A primary key uniquely identifies each record within its own table, while a foreign key references the primary key of another table to establish a relationship",
+    "optionC": "A table can have multiple primary keys, but only one foreign key",
+    "optionD": "Foreign keys are used exclusively for encrypting database records",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 29
+  },
+  {
+    "questionText": "In the College Database, a student can enroll in multiple courses, and each course can contain multiple students. How is this Many-to-Many (M:N) relationship properly modeled in a relational database?",
+    "optionA": "By storing a comma-separated list of course IDs in a single text column inside the Students table",
+    "optionB": "By introducing an intermediate Junction/Bridge table (e.g., `enrollments`) containing foreign keys referencing both Students and Courses",
+    "optionC": "By adding foreign keys to both Students and Courses referencing each other directly",
+    "optionD": "By creating duplicate rows in the Courses table for every student enrolled",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 30
+  },
+  {
+    "questionText": "Which of the following correctly pairs SQL statements with their category?",
+    "optionA": "DDL: INSERT, UPDATE, DELETE | DML: CREATE, ALTER, DROP",
+    "optionB": "DDL: CREATE, ALTER, DROP | DML: INSERT, UPDATE, DELETE | DQL: SELECT",
+    "optionC": "DDL: SELECT, WHERE, ORDER BY | DML: COMMIT, ROLLBACK",
+    "optionD": "DCL: TRUNCATE, DROP | DDL: GRANT, REVOKE",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 31
+  },
+  {
+    "questionText": "What is a major difference between `TRUNCATE TABLE students;` and `DELETE FROM students;`?",
+    "optionA": "TRUNCATE allows a WHERE clause to filter rows, while DELETE deletes the whole table unconditionally",
+    "optionB": "DELETE is a DDL command that drops the table structure, while TRUNCATE is a DML command",
+    "optionC": "TRUNCATE is a DDL operation that deallocates data pages, is faster, and resets auto-increment counters, while DELETE is a DML operation that logs row-by-row deletions",
+    "optionD": "TRUNCATE can only be used on tables without primary keys",
+    "correctAnswer": "C",
+    "module": "SQL",
+    "questionNumber": 32
+  },
+  {
+    "questionText": "In database management, what does the **Atomicity** property of ACID guarantee?",
+    "optionA": "Data is stored in atomic strings without commas",
+    "optionB": "All operations within a transaction succeed completely, or if any part fails, the entire transaction is rolled back leaving the database unchanged (\"All-or-Nothing\")",
+    "optionC": "Transactions execute concurrently without interfering with one another",
+    "optionD": "Committed data persists permanently even in the event of hardware power failure",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 33
+  },
+  {
+    "questionText": "Which constraint ensures that a column cannot contain duplicate values while still permitting at most one NULL value (in databases like PostgreSQL / SQL Server)?",
+    "optionA": "PRIMARY KEY",
+    "optionB": "NOT NULL",
+    "optionC": "UNIQUE",
+    "optionD": "CHECK",
+    "correctAnswer": "C",
+    "module": "SQL",
+    "questionNumber": 34
+  },
+  {
+    "questionText": "Consider this query: SELECT DISTINCT department_id, enrollment_year FROM students; How does SQL evaluate the `DISTINCT` keyword here?",
+    "optionA": "It returns unique department_ids, but allows duplicate enrollment_years",
+    "optionB": "It returns rows where the *combination* of department_id and enrollment_year is unique",
+    "optionC": "It returns an error because DISTINCT can only be applied to a single column",
+    "optionD": "It returns unique enrollment_years regardless of department",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 35
+  },
+  {
+    "questionText": "Examine the following query: SELECT * FROM instructors WHERE department_id = 1 OR department_id = 2 AND salary > 75000; How does the database evaluate this `WHERE` clause without parentheses?",
+    "optionA": "`(department_id = 1 OR department_id = 2) AND salary > 75000`",
+    "optionB": "`department_id = 1 OR (department_id = 2 AND salary > 75000)`",
+    "optionC": "It evaluates strictly from left to right",
+    "optionD": "The query throws a syntax error because mixed operators require parentheses",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 36
+  },
+  {
+    "questionText": "Which `WHERE` clause correctly filters for student email addresses ending with `@student.edu` and having a first name that starts with 'A'?",
+    "optionA": "`WHERE email LIKE '%@student.edu' AND first_name LIKE 'A%'`",
+    "optionB": "`WHERE email LIKE '_@student.edu' AND first_name LIKE 'A_'`",
+    "optionC": "`WHERE email = '*@student.edu' AND first_name = 'A*'`",
+    "optionD": "`WHERE email CONTAINS '@student.edu' AND first_name STARTSWITH 'A'`",
+    "correctAnswer": "A",
+    "module": "SQL",
+    "questionNumber": 37
+  },
+  {
+    "questionText": "Why does the query `SELECT * FROM instructors WHERE department_id = NULL;` return 0 rows even when there are instructors with unassigned (NULL) departments?",
+    "optionA": "NULL must be enclosed in quotes: `department_id = 'NULL'`",
+    "optionB": "In SQL's three-valued logic, any equality comparison with NULL evaluates to UNKNOWN, which filters out the row; `IS NULL` must be used instead",
+    "optionC": "NULL values are automatically converted to 0 in SQL",
+    "optionD": "Instructors with NULL departments are automatically dropped by the table schema",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 38
+  },
+  {
+    "questionText": "You want to find the top 5 highest paid instructors. If two instructors earn the same salary, they should be sorted alphabetically by their last name. What is the correct SQL clause?",
+    "optionA": "`ORDER BY salary ASC, last_name DESC LIMIT 5`",
+    "optionB": "`ORDER BY salary DESC, last_name ASC LIMIT 5`",
+    "optionC": "`SORT BY salary DESC THEN last_name ASC TOP 5`",
+    "optionD": "`ORDER BY last_name ASC, salary DESC LIMIT 5`",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 39
+  },
+  {
+    "questionText": "A table `departments` has 5 rows. In the `building` column, 4 rows have valid text values and 1 row is NULL. What are the respective outputs of `COUNT(*)` and `COUNT(building)`?",
+    "optionA": "5 and 5",
+    "optionB": "5 and 4",
+    "optionC": "4 and 4",
+    "optionD": "5 and 0",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 40
+  },
+  {
+    "questionText": "Why does the following SQL query produce an error in standard SQL? SELECT department_id, first_name, AVG(salary) FROM instructors GROUP BY department_id;",
+    "optionA": "Aggregate functions like AVG cannot be used with GROUP BY",
+    "optionB": "`first_name` is neither aggregated nor included in the `GROUP BY` clause",
+    "optionC": "`salary` must also appear in the GROUP BY clause",
+    "optionD": "The table must be sorted using ORDER BY before grouping",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 41
+  },
+  {
+    "questionText": "What is the primary difference in execution order and purpose between `WHERE` and `HAVING`?",
+    "optionA": "WHERE filters aggregated group metrics; HAVING filters raw individual rows",
+    "optionB": "WHERE filters raw rows *before* aggregation occurs; HAVING filters grouped summary records *after* aggregation occurs",
+    "optionC": "WHERE can only be used with numeric data; HAVING can only be used with text data",
+    "optionD": "WHERE and HAVING are completely interchangeable synonyms in modern RDBMS",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 42
+  },
+  {
+    "questionText": "You want to find the number of enrollments for each course within each semester. Which `GROUP BY` clause is required?",
+    "optionA": "`GROUP BY course_id`",
+    "optionB": "`GROUP BY semester`",
+    "optionC": "`GROUP BY course_id, semester`",
+    "optionD": "`GROUP BY COUNT(enrollment_id)`",
+    "correctAnswer": "C",
+    "module": "SQL",
+    "questionNumber": 43
+  },
+  {
+    "questionText": "Which query correctly counts how many First Class students (GPA >= 3.5) exist in each department without filtering out the other students from total counts?",
+    "optionA": "`SELECT department_id, COUNT(CASE WHEN gpa >= 3.5 THEN 1 END) AS honors_count FROM students GROUP BY department_id;`",
+    "optionB": "`SELECT department_id, COUNT(*) AS honors_count FROM students WHERE gpa >= 3.5 GROUP BY department_id;`",
+    "optionC": "`SELECT department_id, SUM(gpa >= 3.5) FROM students GROUP BY department_id;`",
+    "optionD": "`SELECT department_id, IF(gpa >= 3.5, COUNT(*), 0) FROM students GROUP BY department_id;`",
+    "correctAnswer": "A",
+    "module": "SQL",
+    "questionNumber": 44
+  },
+  {
+    "questionText": "In the College database, student Kemi (student_id = 1007) has a NULL `department_id` (undeclared major). Department 5 (Fine Arts) has no students enrolled. What happens when joining `students` and `departments` using an `INNER JOIN`?",
+    "optionA": "Kemi is included, but Fine Arts is excluded",
+    "optionB": "Fine Arts is included, but Kemi is excluded",
+    "optionC": "Both Kemi and Fine Arts are excluded from the result set",
+    "optionD": "Both Kemi and Fine Arts are included with NULL values",
+    "correctAnswer": "C",
+    "module": "SQL",
+    "questionNumber": 45
+  },
+  {
+    "questionText": "You want to find all departments that currently have NO instructors assigned to them. Which query correctly answers this business question?",
+    "optionA": "`SELECT d.department_name FROM departments d INNER JOIN instructors i ON d.department_id = i.department_id WHERE i.instructor_id IS NULL;`",
+    "optionB": "`SELECT d.department_name FROM departments d LEFT JOIN instructors i ON d.department_id = i.department_id WHERE i.instructor_id IS NULL;`",
+    "optionC": "`SELECT d.department_name FROM departments d RIGHT JOIN instructors i ON d.department_id = i.department_id WHERE d.department_id IS NULL;`",
+    "optionD": "`SELECT department_name FROM departments WHERE instructor_count = 0;`",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 46
+  },
+  {
+    "questionText": "MySQL does not natively support the `FULL OUTER JOIN` syntax. How do database engineers achieve a FULL OUTER JOIN between two tables in MySQL?",
+    "optionA": "By running a CROSS JOIN followed by a WHERE clause",
+    "optionB": "By combining a LEFT JOIN and a RIGHT JOIN using the `UNION` operator",
+    "optionC": "By using an INNER JOIN with the ALL keyword",
+    "optionD": "By nesting two subqueries inside a GROUP BY",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 47
+  },
+  {
+    "questionText": "To display each student's first name, the name of the course they are enrolled in, and the grade they received, how many tables must be joined together?",
+    "optionA": "1 table (`enrollments`)",
+    "optionB": "2 tables (`students` and `courses`)",
+    "optionC": "3 tables (`students`, `enrollments`, and `courses`)",
+    "optionD": "4 tables (`students`, `enrollments`, `courses`, and `departments`)",
+    "correctAnswer": "C",
+    "module": "SQL",
+    "questionNumber": 48
+  },
+  {
+    "questionText": "In the College database, student Ada (student_id = 1001) has enrolled in 3 different courses in the `enrollments` table. If you write: SELECT s.student_id, COUNT(s.student_id), SUM(s.gpa) FROM students s INNER JOIN enrollments e ON s.student_id = e.student_id WHERE s.student_id = 1001 GROUP BY s.student_id; What happens to Ada's GPA (3.85)?",
+    "optionA": "SUM(s.gpa) returns 3.85",
+    "optionB": "SUM(s.gpa) returns 11.55 (3.85 * 3) because joining to enrollments duplicated Ada's row 3 times before aggregation",
+    "optionC": "The query throws a divide-by-zero error",
+    "optionD": "SUM(s.gpa) returns NULL",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 49
+  },
+  {
+    "questionText": "What is a **Scalar Subquery** in SQL?",
+    "optionA": "A subquery that returns multiple columns and multiple rows",
+    "optionB": "A subquery that returns exactly one single value (one row, one column)",
+    "optionC": "A subquery that runs once for each database user",
+    "optionD": "A subquery that can only be placed inside the FROM clause",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 50
+  },
+  {
+    "questionText": "Which query returns all students who are enrolled in either 'CS101' or 'CS201'?",
+    "optionA": "`SELECT * FROM students WHERE student_id IN (SELECT student_id FROM enrollments WHERE course_id IN ('CS101', 'CS201'));`",
+    "optionB": "`SELECT * FROM students WHERE student_id = (SELECT student_id FROM enrollments WHERE course_id = 'CS101' OR 'CS201');`",
+    "optionC": "`SELECT * FROM students WHERE course_id = 'CS101' AND 'CS201';`",
+    "optionD": "`SELECT students.* FROM students JOIN enrollments ON student_id WHERE course_id = ALL('CS101', 'CS201');`",
+    "correctAnswer": "A",
+    "module": "SQL",
+    "questionNumber": 51
+  },
+  {
+    "questionText": "What defines a **Correlated Subquery** and impacts its execution performance?",
+    "optionA": "It is executed once before the outer query runs and caches the results",
+    "optionB": "It references a column from the outer query, meaning it must be re-evaluated row-by-row for every candidate row processed by the outer query",
+    "optionC": "It connects two databases across different physical servers",
+    "optionD": "It can only be used with window functions",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 52
+  },
+  {
+    "questionText": "Why is `WHERE EXISTS (SELECT 1 FROM ...)` often preferred over `WHERE column IN (SELECT column FROM ...)` when querying large subquery datasets?",
+    "optionA": "`EXISTS` stops searching as soon as it finds the very first matching row (short-circuit evaluation), whereas `IN` may collect all matching rows",
+    "optionB": "`IN` cannot handle integer comparisons",
+    "optionC": "`EXISTS` sorts the output automatically",
+    "optionD": "`IN` only works in MySQL, while `EXISTS` works in all databases",
+    "correctAnswer": "A",
+    "module": "SQL",
+    "questionNumber": 53
+  },
+  {
+    "questionText": "What is the primary architectural benefit of using a **Common Table Expression (CTE)** with the `WITH` clause instead of deeply nested subqueries?",
+    "optionA": "CTEs permanently store the data on physical disk as indexed tables",
+    "optionB": "CTEs dramatically improve code readability, allow modular top-down query pipelines, and can be referenced multiple times within the same query",
+    "optionC": "CTEs bypass database user permission checks",
+    "optionD": "CTEs automatically eliminate all duplicate rows from the query",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 54
+  },
+  {
+    "questionText": "What is a **SQL View** (`CREATE VIEW view_name AS ...`)?",
+    "optionA": "A physical copy of data duplicated on a separate hard drive",
+    "optionB": "A saved virtual table based on a SQL query; it does not store the data physically, but dynamically runs the underlying query whenever called",
+    "optionC": "A temporary table that is automatically dropped after 10 minutes",
+    "optionD": "A tool used exclusively for creating chart graphics in SQL",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 55
+  },
+  {
+    "questionText": "Three students share the exact same top score of 95, followed by a fourth student with a score of 90. What rankings will `RANK()` and `DENSE_RANK()` produce for these four students?",
+    "optionA": "RANK: 1, 1, 1, 2 | DENSE_RANK: 1, 1, 1, 4",
+    "optionB": "RANK: 1, 1, 1, 4 | DENSE_RANK: 1, 1, 1, 2",
+    "optionC": "RANK: 1, 2, 3, 4 | DENSE_RANK: 1, 1, 1, 2",
+    "optionD": "Both produce 1, 1, 1, 2",
+    "correctAnswer": "B",
+    "module": "SQL",
+    "questionNumber": 56
+  },
+  {
+    "questionText": "To calculate a cumulative running total of `SalesAmount` ordered by transaction `Date` across the entire company, which window function clause is used?",
+    "optionA": "`SUM(SalesAmount) OVER (ORDER BY Date)`",
+    "optionB": "`RUNNING_SUM(SalesAmount) BY Date`",
+    "optionC": "`SUM(SalesAmount) GROUP BY Date`",
+    "optionD": "`CUMULATIVE(SalesAmount) OVER (PARTITION BY Date)`",
+    "correctAnswer": "A",
+    "module": "SQL",
+    "questionNumber": 57
+  },
+  {
+    "questionText": "What is the primary role of **Power BI Desktop** compared to the **Power BI Service (Cloud)**?",
+    "optionA": "Power BI Desktop is for report authoring, data modeling, and DAX calculations; Power BI Service is for publishing, sharing, collaboration, dashboards, and scheduled refreshes",
+    "optionB": "Power BI Desktop is only for viewing reports on mobile phones",
+    "optionC": "Power BI Service is where data models and relationships must be built from scratch",
+    "optionD": "Power BI Desktop requires internet connectivity to calculate measures",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 58
+  },
+  {
+    "questionText": "How does Power Query record transformations applied during the data preparation phase?",
+    "optionA": "It modifies and permanently overwrites the original source Excel/CSV file on disk",
+    "optionB": "It records transformations as sequential, immutable \"Applied Steps\" in M code that re-execute upon data refresh without altering the original source data",
+    "optionC": "It saves changes as SQL stored procedures in the local cache",
+    "optionD": "It converts the data directly into Python scripts",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 59
+  },
+  {
+    "questionText": "An analyst notices that values in a \"Customer City\" column look identical but are grouping into separate rows in visuals (e.g., \"Lagos\" and \"Lagos \"). What is the root cause, and how should it be solved in Power Query?",
+    "optionA": "Capitalization error; use the Uppercase transformation",
+    "optionB": "Hidden leading or trailing spaces; apply the `Transform > Format > Trim` step",
+    "optionC": "Incorrect relationship cardinality; change from 1:Many to Many:Many",
+    "optionD": "DAX calculation error; rewrite the measures using SUMX",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 60
+  },
+  {
+    "questionText": "You import a financial spreadsheet that has columns: `Department`, `Jan_2026`, `Feb_2026`, `Mar_2026`, `Apr_2026`. Why and how should this table be reshaped in Power Query for optimal Power BI modeling?",
+    "optionA": "Pivot the Department column so each department becomes its own column",
+    "optionB": "Select the Department column and choose **Unpivot Other Columns** to transform the wide cross-tab layout into a narrow, normalized tabular format (`Department`, `Attribute/Month`, `Value/Amount`)",
+    "optionC": "Merge the month columns into a single text column",
+    "optionD": "Leave it as is, because Power BI prefers wide tables with dozens of measure columns",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 61
+  },
+  {
+    "questionText": "In Power Query, what is the key difference between **Merge Queries** and **Append Queries**?",
+    "optionA": "Merge is equivalent to a SQL UNION (stacking rows); Append is equivalent to a SQL JOIN (adding columns)",
+    "optionB": "Merge is equivalent to a SQL JOIN (combining columns based on a common key); Append is equivalent to a SQL UNION (stacking rows with similar schemas)",
+    "optionC": "Merge creates a Star Schema; Append creates a Snowflake Schema",
+    "optionD": "Both operations perform identical data combinations",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 62
+  },
+  {
+    "questionText": "Why is a **Star Schema** considered the gold standard best practice for data modeling in Power BI over wide flat tables or highly normalized Snowflake schemas?",
+    "optionA": "Star schemas require fewer relationships, yield simpler and faster DAX formulas, and optimize the compression and query speed of the in-memory VertiPaq engine",
+    "optionB": "Star schemas require 90% less disk space than any other schema",
+    "optionC": "Power BI cannot create relationships in a Snowflake schema",
+    "optionD": "Star schemas prevent users from writing calculated columns",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 63
+  },
+  {
+    "questionText": "In a retail data model containing `Sales`, `Products`, `Customers`, and `Stores`, which table is the **Fact Table**, and what characterizes it?",
+    "optionA": "`Customers`, because it contains demographic attributes used for filtering",
+    "optionB": "`Products`, because product prices never change",
+    "optionC": "`Sales`, because it records business transactional events, contains numerical additive metrics (Quantity, SalesAmount), and holds foreign keys linking to dimensions",
+    "optionD": "`Stores`, because it contains physical geographic coordinates",
+    "correctAnswer": "C",
+    "module": "PowerBI",
+    "questionNumber": 64
+  },
+  {
+    "questionText": "What relationship cardinality should ideally exist between a Dimension table (e.g., `DimCustomer` on `CustomerID`) and a Fact table (e.g., `FactSales` on `CustomerID`)?",
+    "optionA": "One-to-One (1:1)",
+    "optionB": "One-to-Many (1:*) from Dimension to Fact",
+    "optionC": "Many-to-Many (*:*)",
+    "optionD": "Many-to-One (*:1) from Fact to Dimension",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 65
+  },
+  {
+    "questionText": "Why should analysts generally avoid setting relationship cross-filter direction to **\"Both\" (Bidirectional)** across multiple tables in a data model?",
+    "optionA": "Bidirectional filters disable all visual interactions",
+    "optionB": "Bidirectional filtering can introduce ambiguous filter paths, unexpected measure results, circular dependencies, and severe performance degradation",
+    "optionC": "Power BI automatically deletes relationships set to Both",
+    "optionD": "Bidirectional filtering prevents the use of Time Intelligence functions",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 66
+  },
+  {
+    "questionText": "In `FactSales`, there are two date fields: `OrderDate` and `ShipDate`. Both link to the `DateTable[Date]`. Why is one relationship marked with a dotted line (inactive), and how can a measure activate it?",
+    "optionA": "Power BI can only have one active relationship between any two tables to avoid ambiguity; the inactive relationship can be invoked using `USERELATIONSHIP()` inside `CALCULATE()`",
+    "optionB": "Dotted lines indicate broken data types that must be repaired in Power Query",
+    "optionC": "Inactive relationships are deleted upon report publishing",
+    "optionD": "The inactive relationship can only be used by creating a duplicate Fact table",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 67
+  },
+  {
+    "questionText": "Why is a dedicated, custom Date dimension table required for professional Power BI development rather than relying on auto-generated date hierarchies?",
+    "optionA": "Auto date/time creates hidden background tables for every single date column, significantly inflating file size and failing to support custom fiscal calendars, 4-4-5 weeks, or shared date filtering",
+    "optionB": "Auto-generated date hierarchies cannot display months in English",
+    "optionC": "Power BI Desktop crashes if auto date/time is enabled",
+    "optionD": "Custom date tables are required by SQL databases",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 68
+  },
+  {
+    "questionText": "What is the difference between `CALENDAR()` and `CALENDARAUTO()` in DAX?",
+    "optionA": "`CALENDAR()` requires explicit `StartDate` and `EndDate` arguments; `CALENDARAUTO()` automatically inspects the entire model to find the minimum and maximum dates",
+    "optionB": "`CALENDAR()` generates hours and minutes; `CALENDARAUTO()` only generates years",
+    "optionC": "`CALENDARAUTO()` works only in Excel; `CALENDAR()` works only in Power BI",
+    "optionD": "There is no difference; they are exact aliases",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 69
+  },
+  {
+    "questionText": "When you place `Month Name` (\"January\", \"February\", \"March\"...) on the X-axis of a column chart, Power BI sorts them alphabetically: \"April\", \"August\", \"December\"... How do you force months to sort chronologically?",
+    "optionA": "Manually rename the months with numbers prefixing them: \"1-Jan\", \"2-Feb\"",
+    "optionB": "Select the `Month Name` column in Data view, navigate to **Column Tools > Sort by Column**, and select `Month Number`",
+    "optionC": "Use the `SORT()` function inside every DAX measure",
+    "optionD": "Re-import the table from Excel",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 70
+  },
+  {
+    "questionText": "What happens when you select **Mark as Date Table** on your custom calendar table in Power BI?",
+    "optionA": "It tells the DAX engine which table and column to use for Time Intelligence, verifies that the date column contains unique, continuous dates without gaps, and removes redundant built-in date hierarchies",
+    "optionB": "It locks the table from being edited by other users",
+    "optionC": "It converts all dates into UTC timestamps",
+    "optionD": "It automatically formats every visual on the canvas into a line chart",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 71
+  },
+  {
+    "questionText": "What is the key technical difference between a **Calculated Column** and a **Measure** in Power BI?",
+    "optionA": "Calculated columns are evaluated during data refresh and stored physically in RAM/disk within the `.pbix` file; Measures are calculated dynamically on the fly at query time based on visual filter context and consume no file storage",
+    "optionB": "Measures are evaluated during refresh; Calculated columns are evaluated at query time",
+    "optionC": "Calculated columns can only use text; Measures can only use numbers",
+    "optionD": "Measures can be placed in visual axis rows, but Calculated columns cannot",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 72
+  },
+  {
+    "questionText": "Why do professional Power BI developers create a dedicated `_Measures` table (using `Home > Enter Data`)?",
+    "optionA": "Power BI throws a compilation error if measures are placed inside Fact tables",
+    "optionB": "To keep all calculated business logic organized in one central, easy-to-find container, separate from underlying data tables, which moves to the very top of the Fields pane",
+    "optionC": "It speeds up the internet connection for report viewers",
+    "optionD": "Measures tables are required for creating relationships",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 73
+  },
+  {
+    "questionText": "What is **Row Context** in DAX?",
+    "optionA": "The filters applied by slicers on the report canvas",
+    "optionB": "The awareness of the 'current row' during row-by-row iteration (such as in a Calculated Column or inside iterator functions like `SUMX`)",
+    "optionC": "The number of rows returned by a SQL query",
+    "optionD": "The relationship line connecting two tables",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 74
+  },
+  {
+    "questionText": "When you drag a measure `[Total Sales]` into a Card visual, it displays ₦46,600. When you drag it into a Matrix with `Product` on Rows, it shows ₦25,000 for Rice, ₦12,000 for Milk, and ₦9,600 for Bread. What causes the measure to produce different numbers?",
+    "optionA": "Row Context",
+    "optionB": "Filter Context",
+    "optionC": "Query Folding",
+    "optionD": "Auto-Detect Relationships",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 75
+  },
+  {
+    "questionText": "In `Sales`, you have `Quantity` and `Unit Price`, but no total line amount column. Why will `=SUM(Sales[Quantity] * Sales[Unit Price])` fail, and what is the correct DAX formula?",
+    "optionA": "`SUM` only accepts a single column reference as an argument; use `=SUMX(Sales, Sales[Quantity] * Sales[Unit Price])`",
+    "optionB": "`SUM` cannot multiply numbers; use `=MULTIPLY(Sales[Quantity], Sales[Unit Price])`",
+    "optionC": "DAX cannot perform row-level multiplication without a Python script",
+    "optionD": "Use `=SUM(Sales[Quantity]) * SUM(Sales[Unit Price])`",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 76
+  },
+  {
+    "questionText": "Which statement best describes the fundamental role of the `CALCULATE()` function in DAX?",
+    "optionA": "It is simply an alternative way to write arithmetic formulas like addition and subtraction",
+    "optionB": "It is the only DAX function capable of creating, modifying, overriding, or clearing Filter Context for an expression",
+    "optionC": "It formats numbers into currency strings",
+    "optionD": "It exports reports into Microsoft Excel format",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 77
+  },
+  {
+    "questionText": "What is **Context Transition** in DAX?",
+    "optionA": "Switching a report theme from Light Mode to Dark Mode",
+    "optionB": "The process by which `CALCULATE()` transforms an existing Row Context into an equivalent Filter Context",
+    "optionC": "Moving data from Power Query into the Data Model",
+    "optionD": "Exporting a `.pbix` file to Power BI Service",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 78
+  },
+  {
+    "questionText": "You want to create a measure that calculates each product's percentage of total sales: `[Total Sales] / [Grand Total Sales]`. Which formula correctly computes `[Grand Total Sales]` so that it ignores any product filters applied by rows or slicers?",
+    "optionA": "`=CALCULATE([Total Sales], ALL(Products))`",
+    "optionB": "`=CALCULATE([Total Sales], FILTER(Products, TRUE))`",
+    "optionC": "`=SUM([Total Sales])`",
+    "optionD": "`=TOTAL([Total Sales], ALLSELECTED())`",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 79
+  },
+  {
+    "questionText": "What does the `FILTER()` function in DAX return?",
+    "optionA": "A single scalar number",
+    "optionB": "A boolean TRUE/FALSE flag",
+    "optionC": "A table containing only the rows from the specified table that satisfy the boolean condition",
+    "optionD": "A visual slicer on the canvas",
+    "correctAnswer": "C",
+    "module": "PowerBI",
+    "questionNumber": 80
+  },
+  {
+    "questionText": "You want to display how different cost components (e.g., Cost of Goods, Marketing, Salaries, Taxes) subtract from Gross Revenue to arrive at Net Profit. Which visualization type is specifically designed for this narrative?",
+    "optionA": "Pie Chart",
+    "optionB": "Waterfall Chart",
+    "optionC": "Scatter Plot",
+    "optionD": "Treemap",
+    "correctAnswer": "B",
+    "module": "PowerBI",
+    "questionNumber": 81
+  },
+  {
+    "questionText": "By default, clicking a bar in a chart *cross-highlights* other visuals on the canvas (dimming non-selected portions). How can an author change this behavior so that clicking a bar completely filters the other visuals or has no effect at all?",
+    "optionA": "Format tab > Edit Interactions",
+    "optionB": "Modeling tab > Manage Roles",
+    "optionC": "View tab > Bookmarks",
+    "optionD": "Insert tab > Power Automate",
+    "correctAnswer": "A",
+    "module": "PowerBI",
+    "questionNumber": 82
+  }
+]

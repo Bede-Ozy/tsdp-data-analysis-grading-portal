@@ -784,3 +784,16 @@ export const getEndOfProgrammeFeedbackList = () =>
 export const getRecognitionLeaderboard = () =>
   callApi('getRecognitionLeaderboard', []);
 
+// ============================================================================
+// FINAL TECHNICAL EXAM API ENDPOINTS
+// ============================================================================
+export const getExamConfig = () => callApi('getExamConfig', []);
+export const startExamAttempt = (studentNumber) => callApi('startExamAttempt', [studentNumber]);
+export const saveExamAnswer = (attemptID, questionNumber, answer) => callApi('saveExamAnswer', [attemptID, questionNumber, answer]);
+export const submitExamAttempt = (attemptID) => callApi('submitExamAttempt', [attemptID]);
+export const getExamResult = (attemptID) => callApi('getExamResult', [attemptID]);
+export const getAllExamResults = () => callApi('getAllExamResults', []);
+export const activateExam = () => callApi('activateExam', []);
+export const deactivateExam = () => callApi('deactivateExam', []);
+export const loadExamQuestions = (questionsArray) => callApi('loadExamQuestions', [questionsArray]);
+
