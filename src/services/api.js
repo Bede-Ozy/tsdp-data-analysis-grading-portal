@@ -319,8 +319,14 @@ export const getStudentGroupRank = (studentID) =>
 export const recordIndividualPresentation = (presentationID, studentID, questionAsked, responseScore, comments, coachID) => 
   callApi('recordIndividualPresentation', [presentationID, studentID, questionAsked, responseScore, comments, coachID]);
 
-export const recordSoftSkillsEvaluation = (studentID, weekNumber, communicationScore, teamworkScore, leadershipScore, professionalismScore, problemSolvingScore, emotionalIntelligenceScore, comments, coachID) => 
-  callApi('recordSoftSkillsEvaluation', [studentID, weekNumber, communicationScore, teamworkScore, leadershipScore, professionalismScore, problemSolvingScore, emotionalIntelligenceScore, comments, coachID]);
+export const getAllSoftSkillsEvaluations = () => 
+  callApi('getAllSoftSkillsEvaluations', []);
+
+export const saveSoftSkillsEvaluations = (scoresArray, coachID) => 
+  callApi('saveSoftSkillsEvaluations', [scoresArray, coachID]);
+
+export const recordSoftSkillsEvaluation = (studentID, communicationScore, teamworkScore, leadershipScore, professionalismScore, problemSolvingScore, emotionalIntelligenceScore, comments, coachID) => 
+  callApi('recordSoftSkillsEvaluation', [studentID, communicationScore, teamworkScore, leadershipScore, professionalismScore, problemSolvingScore, emotionalIntelligenceScore, comments, coachID]);
 
 export const approveSocialMediaPost = (postID, score, feedback, coachID) => 
   callApi('approveSocialMediaPost', [postID, score, feedback, coachID]);

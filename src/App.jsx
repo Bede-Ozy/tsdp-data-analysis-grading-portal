@@ -26,6 +26,7 @@ import ExamResultPage from './pages/student/ExamResultPage';
 
 // Feedback & Round-Up Analytics (Shared Coach & Admin)
 import FeedbackAnalyticsDashboard from './pages/coach/FeedbackAnalyticsDashboard';
+import EndOfProgrammeFeedbackDashboard from './pages/coach/EndOfProgrammeFeedbackDashboard';
 
 // Coach Pages
 import CoachLogin from './pages/coach/CoachLogin';
@@ -376,6 +377,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/coach/feedback"
+                element={
+                  <ProtectedRoute allowedRoles={['coach']}>
+                    <EndOfProgrammeFeedbackDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/coach/exam"
                 element={
                   <ProtectedRoute allowedRoles={['coach', 'admin']}>
@@ -438,6 +447,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'coach']}>
                     <FeedbackAnalyticsDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/feedback"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <EndOfProgrammeFeedbackDashboard />
                   </ProtectedRoute>
                 }
               />

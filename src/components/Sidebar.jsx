@@ -54,6 +54,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/coach/soft-skills', label: 'Soft Skills Evaluation', icon: Smile },
     { to: '/coach/approve-social-media', label: 'Approve Social Media', icon: CheckCircle },
     { to: '/coach/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
+    { to: '/coach/feedback', label: 'End of Programme Feedback', icon: Award },
     { to: '/coach/exam', label: 'Exam', icon: FileQuestion },
   ];
 
@@ -66,6 +67,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/admin/create-capstone-group', label: 'Create Capstone Group', icon: Layers },
     { to: '/admin/reports', label: 'Performance Reports', icon: FileBarChart },
     { to: '/admin/feedback-analytics', label: 'Review & Feedback', icon: BarChart3 },
+    { to: '/admin/feedback', label: 'End of Programme Feedback', icon: Award },
     { to: '/admin/exam', label: 'Exam', icon: FileQuestion },
   ];
 
